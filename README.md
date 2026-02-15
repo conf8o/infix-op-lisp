@@ -177,6 +177,7 @@ Clojure, Haskell, OCamlをベースにシンプルな形の構文を用意する
 
 リストとタプルについては、特別なリテラル表現を用意し、パターンマッチを可能にする。
 
+```
 ; ============================================================
 ; Collection & Tuple Specification (Draft v0)
 ; ============================================================
@@ -345,3 +346,4 @@ Clojure, Haskell, OCamlをベースにシンプルな形の構文を用意する
 ; - Constructed via canonical form only:
 ;   (array ...)
 ; - No special pattern syntax.
+```
