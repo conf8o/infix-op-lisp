@@ -1,214 +1,208 @@
 # infix-op-lisp
 
+中置演算子を標準でサポートするLisp系関数型言語の仕様書です。Clojure、Haskell、OCamlをベースに、シンプルで一貫性のある構文を提供します。
+
 ## 基本構文
 
-Clojure, Haskell, OCamlをベースにシンプルな形の構文を用意する。
+### コア
 
 ```
 ; ============================================================
-; Core Forms (naming + surface shape)
+; コア機能
 ; ============================================================
 
-; local binding
+; 定義
+(def name value)
+
+(def (fname arg1 arg2 ...)
+  expr)
+
+; 束縛
 (let (name1 expr1
       name2 expr2
       ...)
   body)
 
-; pattern matching
+; パターンマッチング
 (match value
   pattern1 expr1
   pattern2 expr2
   ...)
 
-; conditional (predicate-based)
+; if式
+(if pred
+  then-expr
+  else-epxr)
+
+; 条件分岐
 (cond
   pred1 expr1
   pred2 expr2
   ...
   else  exprN)
 
-; non-monadic sequencing
+; 無名関数
+(fn (arg1 arg2 ...)
+  body)
+
+; 非モナディックな逐次実行
 (begin
   expr1
   expr2
   ...
   result)
+```
 
-; anonymous function
-(fn (args...)
-  body)
+### 演算子の表層形式
 
-
+```
 ; ============================================================
-; Operator Surface Policy
+; 演算子の表層形式
 ; ============================================================
 
-; chain form
+; 連鎖形式
 ; (a op b op c op ...)
 
-; fold form
+; 畳み込み形式
 ; (op a b c ...)
 
-; examples
+; 例
 ; (a * b * c)
 ; (* a b c)
 ; (x |> f |> g)
+```
 
+### 副作用 / モナド
 
+```
 ; ============================================================
-; Effect / Monad
+; 副作用 / モナド
 ; ============================================================
 
 (do
   (a <- ma)
   (n := x)
   expr)
+```
 
+### アプリカティブファンクタ
 
+```
 ; ============================================================
-; Applicative functor
+; アプリカティブファンクタ
 ; ============================================================
 
 (let+ (a aa
        b ab
        c ac)
   (f a b c))
-
 ```
 
-## 中置演算子のルールと例
+## 中置演算子
 
-中置演算を標準で搭載する。また、一つの括弧内では同じ演算子を連鎖できる。式中で異なる演算子を使う場合は明示的な括弧が必要。そのため演算子の優先順位は従来のLisp同様存在しない。型と演算がモノイドを成す場合は、n項の畳み込み演算として適用可能。
+### 概要
+
+中置演算子を標準で搭載します。1つの括弧内では同じ演算子を連鎖できます。式中で異なる演算子を使う場合は明示的な括弧が必要です。そのため、演算子の優先順位は従来のLisp同様に存在しません。型と演算がモノイドを成す場合は、n項の畳み込み演算として適用可能です。
+
+### 中置演算子の宣言
 
 ```
 ; ============================================================
-; Infix Declarations (infix first)
+; 中置演算子の宣言(中置優先)
 ; ============================================================
 
-; --- foldable infix ---
-; Requires: Monoid on the given set/type (associativity + identity).
-; Surface: allows chaining and prefix n-ary (including 0-arg).
-; Normal form: n-ary application, e.g. a + b + c => (+ a b c), (+) => identity.
+; --- 畳み込み可能な中置演算子 ---
+; 要件: 与えられた集合/型上のモノイド(結合性 + 単位元)
+; 表層: 連鎖とプレフィックスn項演算を許可(0引数を含む)
+; 正規形: n項適用、例: a + b + c => (+ a b c), (+) => 単位元
 (infix-foldable (+)  Int    0)
 (infix-foldable (*)  Int    1)
 (infix-foldable (&&) Bool   true)
 (infix-foldable (||) Bool   false)
 (infix-foldable (<>) String "")
 
-; --- chainable infix ---
-; Requires: binary operator + associativity direction only (no algebraic laws).
-; Surface: allows chaining via assoc-left/right.
-; Normal form: binary nesting (no prefix n-ary).
+; --- 連鎖可能な中置演算子 ---
+; 要件: 二項演算子 + 結合方向のみ(代数的法則は不要)
+; 表層: assoc-left/rightによる連鎖を許可
+; 正規形: 二項ネスト(プレフィックスn項演算なし)
 (infix-chainable (->) assoc-right)
 (infix-chainable (::) assoc-right)
 (infix-chainable (|>) assoc-left)
-(infix-chainable (<<) assoc-right)   ; function composition
+(infix-chainable (<<) assoc-right)   ; 関数合成
 
-; --- plain infix ---
-; Surface: binary only, no chaining.
+; --- プレーンな中置演算子 ---
+; 表層: 二項のみ、連鎖不可
 (infix (=))
 (infix (:))
 (infix (<))
 (infix (>))
 
-; ============================================================
-; Type Declarations
-; ============================================================
-
-; --- prefix style ---
-(: (+)  (Int -> Int -> Int))
-(: (*)  (Int -> Int -> Int))
-(: (&&) (Bool -> Bool -> Bool))
-(: (||) (Bool -> Bool -> Bool))
-(: (<>) (String -> String -> String))
-
-(: (->) (Type -> Type -> Type))
-(: (::) (T -> (List T) -> (List T)))
-(: (|>) (A -> (A -> B) -> B))
-(: (<<) ((B -> C) -> (A -> B) -> (A -> C)))
-
-(: (=) (T -> T -> Bool))
-(: (:) (Symbol -> Type -> Decl))
-(: (<) (Int -> Int -> Bool))
-(: (>) (Int -> Int -> Bool))
-
-; --- infix style (same info, different surface form) ---
-((+)  : (Int -> Int -> Int))
-((*)  : (Int -> Int -> Int))
-((&&) : (Bool -> Bool -> Bool))
-((||) : (Bool -> Bool -> Bool))
-((<>) : (String -> String -> String))
-
-((->) : (Type -> Type -> Type))
-((::) : (T -> (List T) -> (List T)))
-((|>) : (A -> (A -> B) -> B))
-((<<) : ((B -> C) -> (A -> B) -> (A -> C)))
-
-((=)  : (T -> T -> Bool))
-((:)  : (Symbol -> Type -> Decl))
-((<)  : (Int -> Int -> Bool))
-((>)  : (Int -> Int -> Bool))
 
 ; ============================================================
-; Notes / Examples (for codex context)
+; 注記 / 例
 ; ============================================================
 
-; --- foldable: n-ary normal form + 0-arg identity ---
+; --- 畳み込み可能: n項正規形 + 0引数の単位元 ---
 ; (1 + 2 + 3 + 4)         ==> (+ 1 2 3 4)
 ; (+)                     ==> 0
 ; (+ 1)                   ==> 1
 ; (a && b && c)           ==> (&& a b c)
 ; (<>)                    ==> ""
 
-; --- chainable: binary nesting normal form (assoc-directed) ---
+; --- 連鎖可能: 二項ネスト正規形(結合方向に従う) ---
 ; (Int -> Int -> Int)     ==> (-> Int (-> Int Int))
 ; (x |> f |> (g a))       ==> (|> (|> x f) (g a))       ; assoc-left
 ; (f << g << h)           ==> (<< f (<< g h))           ; assoc-right
-; (x :: xs :: [])         ==> (:: x (:: xs []))         ; assoc-right (may be type error, OK)
+; (x :: xs :: [])         ==> (:: x (:: xs []))         ; assoc-right(型エラーの可能性あり)
 
-; --- plain infix: binary only, no chaining ---
+; --- プレーン中置: 二項のみ、連鎖不可 ---
 ; (a = b)                 ==> (= a b)
 ; (a = b = c)             ==> error
 ; (x : Int)               ==> (: x Int)
 ```
 
-## リスト・タプル
+## 型宣言
 
-リストとタプルについては、特別なリテラル表現を用意し、パターンマッチを可能にする。
+`(:)` を型構成を行う演算子ととらえ、前置スタイル、中置スタイルで型宣言できます。
 
 ```
 ; ============================================================
-; Collection & Tuple Specification (Draft v0)
-; ============================================================
-; - Canonical AST is S-expression.
-; - Surface literals always desugar to canonical forms.
-; - Patterns never evaluate.
-; - hash-map and array have no literal syntax (v0).
+; 型宣言
 ; ============================================================
 
+; --- 前置スタイル ---
+(: x Int)
+(: f (Int -> Int))
+(: (+)  (Int -> Int -> Int))
 
+; --- 中置スタイル(同じ情報、異なる表層形式) ---
+(x : Int)
+(f : (Int -> Int))
+((+) : (Int -> Int -> Int))
+```
+
+## コレクション型
+
+リストとタプルについては、特別なリテラル表現を用意し、パターンマッチングを可能にします。
+
+```
 ; ============================================================
-; 1. LIST
+; 1. リスト
 ; ============================================================
 
-; ------------------------------------------------------------
-; Surface (expression)
-; ------------------------------------------------------------
+; コードとしてのリストと、コレクションとしてのリストは区別する。
 
-[]                 ; empty list
-(x :: xs)          ; infix cons (right-associative)
-[a b c]            ; list literal (whitespace-separated)
+; --- 表層形式(式) ---
+[]                 ; 空リスト
+(x :: xs)          ; 中置cons(右結合)
+[a b c]            ; リストリテラル(空白区切り)
 
 
-; ------------------------------------------------------------
-; Canonical (expression)
-; ------------------------------------------------------------
+; --- 正規形式(式) ---
+[]                 ; プリミティブな空リスト値
+(:: x xs)          ; 正規プレフィックス形式
 
-[]                 ; primitive empty list value
-(:: x xs)          ; canonical prefix form
-
-; Desugar rules:
+; 脱糖規則:
 ; [e1 e2 ... en]
 ;   -> (e1 :: (e2 :: (... (en :: []) ...)))
 ;
@@ -216,134 +210,145 @@ Clojure, Haskell, OCamlをベースにシンプルな形の構文を用意する
 ;   -> (:: x y)
 
 
-; ------------------------------------------------------------
-; Types
-; ------------------------------------------------------------
-
+; --- 型 ---
 ; List : Type -> Type
 ; [] : (List a)
 ; (::) : a -> (List a) -> (List a)
 
 
-; ------------------------------------------------------------
-; Pattern Matching (List)
-; ------------------------------------------------------------
+; --- パターンマッチング(リスト) ---
+; 表層パターン:
+[]                 ; 空リストパターン
+(p1 :: p2)         ; consパターン
+[p1 p2 ... pn]     ; リストリテラルパターン
 
-; Surface patterns:
-[]                 ; empty list pattern
-(p1 :: p2)         ; cons pattern
-[p1 p2 ... pn]     ; list literal pattern
-
-; Desugar (pattern):
+; 脱糖規則(パターン):
 ; []               -> []
 ; (p1 :: p2)       -> (:: p1 p2)
 ; [p1 ... pn]      -> p1 :: (p2 :: (... (pn :: []) ...))
 
-; Semantics:
-; - No evaluation occurs in pattern position.
-; - (::) in patterns performs structural decomposition.
-; - (::) is right-associative.
-; - List patterns are for structural binding, not function calls.
+; 意味論:
+; - パターン位置では評価は行われません
+; - パターン中の(::)は構造の分解を行います
+; - (::)は右結合です
+; - リストパターンは構造束縛のためのものであり、関数呼び出しではありません
 
 
 ; ============================================================
-; 2. TUPLE
+; 2. タプル
 ; ============================================================
 
-; ------------------------------------------------------------
-; Arity Mapping
-; ------------------------------------------------------------
-
+; --- アリティマッピング ---
 ; Tuple0 = Unit
 ; Tuple1 = Solo
 ; Tuple2
 ; Tuple3
 ; ...
 
-
-; ------------------------------------------------------------
-; Surface (expression)
-; ------------------------------------------------------------
-
-{}                 ; Unit (Tuple0)
-{a}                ; Solo a (Tuple1)
+; --- 表層形式(式) ---
+{}                 ; Unit(Tuple0)
+{a}                ; Solo a(Tuple1)
 {a b}              ; Tuple2
 {a b c}            ; Tuple3
-; whitespace-separated elements
-; comma is NOT an operator
+; 空白区切りの要素
+; カンマは演算子ではありません
 
 
-; ------------------------------------------------------------
-; Canonical (expression)
-; ------------------------------------------------------------
-
+; --- 正規形式(式) ---
 {}         -> (Unit)
 {a}        -> (Solo a)
 {a b}      -> (Tuple2 a b)
 {a b c}    -> (Tuple3 a b c)
 ; ...
 
-; TupleN constructors are ordinary constructors.
-; They are used via standard function application in canonical form.
+; TupleNコンストラクタは通常のコンストラクタです
+; 正規形式では標準的な関数適用として使用されます
 
 
-; ------------------------------------------------------------
-; Types
-; ------------------------------------------------------------
-
+; --- 型 ---
 ; Unit   : Type
 ; Solo   : Type -> Type
 ; Tuple2 : Type -> Type -> Type
 ; Tuple3 : Type -> Type -> Type -> Type
 ; ...
 
-; Example:
+; 例:
 ; 1      : Int
 ; {1}    : (Solo Int)
 ; 1 != {1}
 
 
-; ------------------------------------------------------------
-; Pattern Matching (Tuple)
-; ------------------------------------------------------------
-
-; Surface patterns:
+; --- パターンマッチング(タプル) ---
+; 表層パターン:
 {}                 ; Unit
 {p}                ; Solo
 {p q}              ; Tuple2
 {p q r}            ; Tuple3
 
-; Desugar (pattern):
+; 脱糖規則(パターン):
 ; {}        -> (Unit)
 ; {p}       -> (Solo p)
 ; {p q}     -> (Tuple2 p q)
 ; {p q r}   -> (Tuple3 p q r)
 ; ...
 
-; Semantics:
-; - Tuple patterns perform structural decomposition only.
-; - No evaluation occurs in pattern position.
-; - Arity is fixed by the static type of the scrutinee.
-; - Matching the same scrutinee with multiple tuple arities
-;   is a static type error.
+; 意味論:
+; - タプルパターンは構造の分解のみを行います
+; - パターン位置では評価は行われません
+; - アリティは被検査対象の静的型により固定されます
+; - 同じ被検査対象に対して複数のタプルアリティでマッチングすることは
+;   静的型エラーです
 
 
 ; ============================================================
-; 3. HASH-MAP (v0)
+; 3. ハッシュマップ
 ; ============================================================
 
-; - No literal syntax.
-; - Constructed via canonical form only:
-;   (hash-map ...)
-; - No special pattern syntax.
+; - リテラル構文はありません
+; - 正規形式でのみ構築可能です: (hash-map ...)
+; - 特別なパターン構文はありません
 
 
 ; ============================================================
-; 4. ARRAY (v0)
+; 4. 配列
 ; ============================================================
 
-; - No literal syntax.
-; - Constructed via canonical form only:
-;   (array ...)
-; - No special pattern syntax.
+; - リテラル構文はありません
+; - 正規形式でのみ構築可能です: (array ...)
+; - 特別なパターン構文はありません
 ```
+
+---
+
+## 凡例：コメント装飾パターン
+
+本仕様書では、コード例内のコメントで以下の装飾パターンを使用しています。
+
+### 主要セクション
+
+```scheme
+; ============================================================
+; セクション名
+; ============================================================
+```
+
+主要な機能や概念の区切りを示します。
+
+### サブセクション
+
+```scheme
+; --- サブセクション名 ---
+```
+
+主要セクション内の詳細な分類を示します。
+- 前後に半角空白1文字を配置
+- 例: `; --- 表層形式(式) ---`、`; --- 型 ---`
+
+### 説明文
+
+```scheme
+; 通常の説明文
+; - 箇条書き項目
+```
+
+通常のコメントや説明には装飾を付けません。箇条書きには `; -` を使用します。
