@@ -77,7 +77,7 @@
 
 (do
   (a <- ma)
-  (n := x)
+  (n = x)
   expr)
 ```
 
@@ -118,7 +118,7 @@
 
 ; --- プレーンな中置演算子 ---
 ; 表層: 二項のみ、連鎖不可
-(infix non (=))
+(infix non (==))
 (infix non (:))
 (infix non (<))
 (infix non (>))
@@ -135,8 +135,8 @@
 ; (x :: xs :: [])         ==> (:: x (:: xs []))         ; right associative
 
 ; --- プレーン中置: 二項のみ、連鎖不可 ---
-; (a = b)                 ==> (= a b)
-; (a = b = c)             ==> error
+; (a == b)                ==> (== a b)
+; (a == b == c)           ==> error
 ; (x : Int)               ==> (: x Int)
 ```
 
