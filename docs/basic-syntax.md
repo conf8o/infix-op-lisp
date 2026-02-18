@@ -10,6 +10,7 @@
 ; 定義
 (def name value)
 
+; 関数定義
 (def (fname arg1 arg2 ...)
   expr)
 
