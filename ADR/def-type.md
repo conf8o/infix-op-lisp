@@ -114,7 +114,7 @@ ARCHIVED
 (def p (Point.make 10 20))
 
 ; 関数合成・高階関数の文脈で使用
-(map Point.make xs ys)
+(map2 Point.make xs ys)
 (Point.make 10)  ; 部分適用可能
 
 ; パターンマッチングでは使えない（関数であって型構成子ではない）
