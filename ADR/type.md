@@ -1,6 +1,13 @@
 # 型定義方法議論
 
-- `type`で全てまかなう vs `struct`, `enum`, `alias` を全部別で用意する。
+- `type`で全てまかなう vs `struct`, `enum`, `alias` を全部別で用意する
+
+## ステータス
+
+ARCHIVED
+
+- 2025-02-19 開始
+- 2025-02-19 ARCHIVED. def-types.md参照。
 
 ## `type`
 
