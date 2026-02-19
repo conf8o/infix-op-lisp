@@ -87,12 +87,12 @@
 (defstruct Vec2 {Int Int})
 ; 生成:
 ;   - Point : {.x Int .y Int} -> Point
-;   - Point.new : Int -> Int -> Point
+;   - Point.make : Int -> Int -> Point
 ;   - Point.x : Point -> Int
 ;   - Point.y : Point -> Int
 ;
 ;   - Vec2 : {Int Int} -> Vec2
-;   - Vec2.new : Int -> Int -> Vec2
+;   - Vec2.make : Int -> Int -> Vec2
 ;   - Vec2.0 : Vec2 -> Int
 ;   - Vec2.1 : Vec2 -> Int
 
@@ -123,10 +123,10 @@
 ```scheme
 (defstruct Point {.x Int .y Int})
 
-(def p (Point.new 10 20))
+(def p (Point.make 10 20))
 
 ; 部分適用・高階関数
-(map Point.new xs ys)
+(map Point.make xs ys)
 ```
 
 ### defalias の場合
@@ -229,7 +229,7 @@
         (sqrt (* s (* (- s a) (* (- s b) (- s c))))))))
 ```
 
-**注記**: コンストラクタ関数（`Point.new`）はマッチングで使えません。マッチングには型構成子（`Point`, `Rectangle`, `Circle` など）を使います。
+**注記**: コンストラクタ関数（`Point.make`）はマッチングで使えません。マッチングには型構成子（`Point`, `Rectangle`, `Circle` など）を使います。
 
 ### defalias の場合
 

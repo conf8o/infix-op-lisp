@@ -61,7 +61,7 @@ ARCHIVED
 (type Point {.x Int .y Int})
 
 ; 生成されるもの:
-;   - 位置引数コンストラクタ: Point.new : Int -> Int -> Point
+;   - 位置引数コンストラクタ: Point.make : Int -> Int -> Point
 ;   - アクセサ関数: Point.x : Point -> Int
 ;   - アクセサ関数: Point.y : Point -> Int
 ```
@@ -111,15 +111,15 @@ ARCHIVED
 
 ```scheme
 ; --- 位置引数コンストラクタ ---
-(def p (Point.new 10 20))
+(def p (Point.make 10 20))
 
 ; 関数合成・高階関数の文脈で使用
-(map Point.new xs ys)
-(Point.new 10)  ; 部分適用可能
+(map Point.make xs ys)
+(Point.make 10)  ; 部分適用可能
 
 ; パターンマッチングでは使えない（関数であって型構成子ではない）
 (match p
-  (Point.new 0 0) ...)  ; エラー！
+  (Point.make 0 0) ...)  ; エラー！
 ```
 
 型名でラップすることで、どの型を構築しているか明示的になります。
@@ -199,7 +199,7 @@ type-alias は単なる型の別名なので、コンストラクタ関数は生
 
 **注**:
 - `.x` のようなドット始まりの記法はstructリテラル内でフィールド名を表します
-- コンストラクタ関数（`Point.new`）はパターンマッチングでは使えません（関数であって型構成子ではないため）
+- コンストラクタ関数（`Point.make`）はパターンマッチングでは使えません（関数であって型構成子ではないため）
 
 ### フィールドアクセス
 
