@@ -15,7 +15,7 @@
 (type TypeName {.field1 Type1 .field2 Type2})
 
 ; 正規形
-(type TypeName (struct (.field1 : Type1) (.field2 : Type2)))
+(type TypeName (struct .field1 Type1 .field2 Type2))
 
 ; --- 例 ---
 (type User {.id Int .name String .email String})
@@ -23,7 +23,8 @@
 ; --- エイリアス ---
 (type-alias TypeName {.field1 Type1 .field2 Type2})
 
-(type-alias TypeName (struct (.field1 : Type1) (.field2 : Type2)))
+; 正規形
+(type-alias TypeName (struct .field1 Type1 .field2 Type2))
 
 ; --- 例 ---
 (type-alias Point {.x Int .y Int})
@@ -90,7 +91,7 @@
 (def p (Point {.x 10 .y 20}))
 
 ; 正規形
-(Point (struct (.x 10) (.y 20)))
+(Point (struct .x 10 .y 20))
 
 ; パターンマッチング
 (match p
@@ -132,7 +133,7 @@
 ; Point と Vec2 は同じ構造体型の別名
 
 ; 正規形
-(struct (.x 10) (.y 20))
+(struct .x 10 .y 20)
 ```
 
 **プリミティブ型の別名の場合**

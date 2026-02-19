@@ -10,10 +10,10 @@
 (type Point {.x Int .y Int})
 
 ; 正規形
-(type Point (struct (.x : Int) (.y : Int)))
-```
+(type Point (struct .x Int .y Int))
 
 構造が同じでも、型名が異なれば別の型として扱われます。
+```
 
 ```scheme
 (type Point {.x Int .y Int})
@@ -27,7 +27,7 @@
 (type-alias Point {.x Int .y Int})
 
 ; 正規形
-(type-alias Point (struct (.x : Int) (.y : Int)))
+(type-alias Point (struct .x Int .y Int))
 ```
 
 構造が同じであれば、型名が異なっても同じ型として扱われます。
@@ -71,7 +71,7 @@
 (def p (Point {.x 10 .y 20}))
 
 ; 正規形
-(Point (struct (.x 10) (.y 20)))
+(Point (struct .x 10 .y 20))
 ```
 
 **コンストラクタ関数**（高階関数で使用）：
@@ -94,7 +94,7 @@
 (def v {.x 10 .y 20})
 
 ; 正規形
-(struct (.x 10) (.y 20))
+(struct .x 10 .y 20)
 ```
 
 高階関数で使いたい場合は補助関数を定義：
