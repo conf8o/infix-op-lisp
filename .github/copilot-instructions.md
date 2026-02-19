@@ -14,7 +14,7 @@
 - `docs/basic-syntax.md`
 - `docs/infix-operators.md`
 - `docs/collection-types.md`
-- `docs/struct-types.md`
+- `docs/def-types.md`
 
 ## 構文の正誤についての特筆事項
 
@@ -42,3 +42,7 @@
 (+ a b c)
 (a + b + c * d) ; 演算子の優先順位はないため、明示的な括弧が必要
 ```
+
+# ドキュメント更新の注意事項
+
+- ステータスがARCHIVEDのドキュメントは更新しないこと。特別指示がない限り参照しないこと。必要な場合は新しいドキュメントを作成すること。
