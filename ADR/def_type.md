@@ -158,7 +158,7 @@
 (type-alias Vec2 {.x Int .y Int})
 
 ; 補助関数を定義
-(def make-vec2 (x y) {.x x .y y})
+(def (make-vec2 x y) {.x x .y y})
 
 ; 高階関数で使用
 (map make-vec2 xs ys)
@@ -189,7 +189,7 @@ type-alias は単なる型の別名なので、コンストラクタ関数は生
   {.x x .y y} ...)
 ```
 
-**注**: 
+**注**:
 - `.x` のようなドット始まりの記法はstructリテラル内でフィールド名を表します
 - コンストラクタ関数（`Point.new`）はパターンマッチングでは使えません（関数であって型構成子ではないため）
 
@@ -223,7 +223,7 @@ type-alias は単なる型の別名なので、コンストラクタ関数は生
 (.y v)  ; => 20
 ```
 
-**プリミティブ型の場合**
+#### プリミティブ型の場合
 
 ```scheme
 (type-alias Email String)
