@@ -8,7 +8,7 @@
 
 - 直積型
 
-```scheme
+```clojure
 (deftype Point (Point {.x Int .y Int}))
 ; 正規形
 (deftype Point (Point (record .x Int .y Int)))
@@ -20,7 +20,7 @@
 
 - 直和型
 
-```scheme
+```clojure
 (deftype Shape
   (Rectangle Int Int)
   (Circle Int)
@@ -29,7 +29,7 @@
 
 - ラッパー型
 
-```scheme
+```clojure
 (deftype Email (Email String))
 ```
 
@@ -37,7 +37,7 @@
 
 直積型(レコード, タプル)に特化したdeftypeの糖衣構文です。コンストラクタやアクセサを自動生成します。
 
-```scheme
+```clojure
 (defstruct Point {.x Int .y Int})
 ; 正規形
 (deftype Point (Point (record .x Int .y Int)))
@@ -51,14 +51,14 @@
 
 型エイリアスを定義します。
 
-```scheme
+```clojure
 (defalias Point {.x Int .y Int})
 (defalias UserName String)
 ```
 
 構造が同じであれば、型名が異なっても同じ型として扱われます。
 
-```scheme
+```clojure
 (defalias Point {.x Int .y Int})
 (defalias Vec2 {.x Int .y Int})
 ; Point と Vec2 は同じ型
@@ -66,7 +66,7 @@
 
 ## 生成される関数
 
-```scheme
+```clojure
 (deftype Point (Point {.x Int .y Int}))
 (deftype Email (Email String))
 ; 生成:
@@ -105,7 +105,7 @@
 
 ### deftype/defstruct の場合
 
-```scheme
+```clojure
 (deftype Point (Point {.x Int .y Int}))
 ; または
 (defstruct Point {.x Int .y Int})
@@ -118,7 +118,7 @@
 
 **コンストラクタ**（defstructのみ）：
 
-```scheme
+```clojure
 (defstruct Point {.x Int .y Int})
 
 (def p (Point.make 10 20))
@@ -129,7 +129,7 @@
 
 ### defalias の場合
 
-```scheme
+```clojure
 (defalias Vec2 {.x Int .y Int})
 
 (v : Vec2)
@@ -141,7 +141,7 @@
 
 高階関数で使いたい場合は補助関数を定義：
 
-```scheme
+```clojure
 (def (make-vec2 x y) {.x x .y y})
 (map2 make-vec2 xs ys)
 ```
@@ -150,7 +150,7 @@
 
 ### deftype/defstruct の場合
 
-```scheme
+```clojure
 (defstruct Point {.x Int .y Int})
 
 (def p (Point {.x 10 .y 20}))
@@ -169,7 +169,7 @@
 型名付きアクセサ（`Vec2.x`）は存在しません。
 フィールド短縮記法（`.x`）を使います：
 
-```scheme
+```clojure
 (defalias Vec2 {.x Int .y Int})
 
 (v : Vec2)
@@ -185,7 +185,7 @@
 
 ### deftype/defstruct の場合
 
-```scheme
+```clojure
 (deftype Point (Point {.x Int .y Int}))
 ; または
 (defstruct Point {.x Int .y Int})
@@ -201,7 +201,7 @@
 
 直和型（列挙型）の場合：
 
-```scheme
+```clojure
 (deftype Shape
   (Rectangle Int Int)
   (Circle Int)
@@ -220,7 +220,7 @@
     (Circle r) (3.14 * r * r)
     (Triangle a b c) 
       ; ヘロンの公式
-      (let ((s ((a + b + c) / 2)))
+      (let (s ((a + b + c) / 2))
         (sqrt (s * (s - a) * (s - b) * (s - c))))))
 ```
 
@@ -228,7 +228,7 @@
 
 ### defalias の場合
 
-```scheme
+```clojure
 (defalias Vec2 {.x Int .y Int})
 
 ; 構築

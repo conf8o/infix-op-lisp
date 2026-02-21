@@ -14,7 +14,7 @@ ARCHIVED
 
 ### 型定義
 
-```scheme
+```clojure
 ; ============================================================
 ; レコード型の定義
 ; ============================================================
@@ -40,14 +40,14 @@ ARCHIVED
 
 **名前等価性**: `type`の場合、構造が同じでも、名前が異なっていれば別の型として扱われます。
 
-```scheme
+```clojure
 (type User {.name String .age Int})
 (type Admin {.name String .age Int})
 ```
 
 **構造的等価性**: `type-alias` の場合、構造が同じであれば、名前が異なっても同じ型として扱われます。
 
-```scheme
+```clojure
 (type-alias Point {.x Int .y Int})
 (type-alias Vec2 {.x Int .y Int})
 ; Point と Vec2 は同じ型（どちらも同じ構造のエイリアス）
@@ -57,7 +57,7 @@ ARCHIVED
 
 #### type（名前的等価性）の場合
 
-```scheme
+```clojure
 (type Point {.x Int .y Int})
 
 ; 生成されるもの:
@@ -68,14 +68,14 @@ ARCHIVED
 
 #### type-alias（構造的等価性）の場合
 
-```scheme
+```clojure
 (type-alias Vec2 {.x Int .y Int})
 
 ; 生成されるもの:
 ;   - なし（ただの型の別名）
 ```
 
-```scheme
+```clojure
 (type-alias Email String)
 
 ; 生成されるもの:
@@ -92,7 +92,7 @@ ARCHIVED
 
 **方法1: 型構成子（パターンマッチ可能）**
 
-```scheme
+```clojure
 (type Point {.x Int .y Int})
 
 ; --- 基本構文 ---
@@ -109,7 +109,7 @@ ARCHIVED
 
 **方法2: コンストラクタ関数（部分適用・高階関数で使用）**
 
-```scheme
+```clojure
 ; --- 位置引数コンストラクタ ---
 (def p (Point.make 10 20))
 
@@ -126,7 +126,7 @@ ARCHIVED
 
 #### type-alias（構造的等価性）の場合
 
-```scheme
+```clojure
 (type-alias Point {.x Int .y Int})
 (type-alias Vec2 {.x Int .y Int})
 
@@ -146,7 +146,7 @@ ARCHIVED
 
 **プリミティブ型の別名の場合**
 
-```scheme
+```clojure
 (type-alias Email String)
 (type-alias UserId Int)
 
@@ -162,7 +162,7 @@ ARCHIVED
 
 必要なら自分で補助関数を定義します：
 
-```scheme
+```clojure
 (type-alias Vec2 {.x Int .y Int})
 
 ; 補助関数を定義
@@ -178,7 +178,7 @@ type-alias は単なる型の別名なので、コンストラクタ関数は生
 
 型構成子による構築とパターンマッチングは対称的です：
 
-```scheme
+```clojure
 ; --- type の場合 ---
 ; 型構成子による構築
 (Point {.x 10 .y 20})
@@ -205,7 +205,7 @@ type-alias は単なる型の別名なので、コンストラクタ関数は生
 
 #### type（名前的等価性）の場合
 
-```scheme
+```clojure
 (def p (Point {.x 10 .y 20}))
 
 ; 型名付きアクセサ関数を使用
@@ -218,7 +218,7 @@ type-alias は単なる型の別名なので、コンストラクタ関数は生
 
 #### type-alias（構造的等価性）の場合
 
-```scheme
+```clojure
 (type-alias Vec2 {.x Int .y Int})
 (v : Vec2)
 (def v {.x 10 .y 20})
@@ -233,7 +233,7 @@ type-alias は単なる型の別名なので、コンストラクタ関数は生
 
 #### プリミティブ型の場合
 
-```scheme
+```clojure
 (type-alias Email String)
 (email : Email)
 (def email "test@example.com")
@@ -251,19 +251,19 @@ type-alias は単なる型の別名なので、コンストラクタ関数は生
 #### type（名前的等価性）
 
 - **型の区別**: 構造が同じでも、型名が異なれば別の型として扱われます
-  ```scheme
+  ```clojure
   (type User {.name String .age Int})
   (type Admin {.name String .age Int})
   ; User と Admin は異なる型
   ```
 - **型安全性**: 意図しない型の混同を防げます
-  ```scheme
+  ```clojure
   (type UserId Int)
   (type PostId Int)
   ; 明確に区別される
   ```
 - **アクセサ関数**: 型ごとに専用のアクセサが生成されます
-  ```scheme
+  ```clojure
   User.name : User -> String
   Admin.name : Admin -> String
   ; これらは異なる関数
@@ -272,24 +272,24 @@ type-alias は単なる型の別名なので、コンストラクタ関数は生
 #### type-alias（構造的等価性）
 
 - **型の同一視**: 構造が同じなら、型名が異なっても同じ型として扱われます
-  ```scheme
+  ```clojure
   (type-alias Point {.x Int .y Int})
   (type-alias Vec2 {.x Int .y Int})
   ; Point と Vec2 は同じ型
   ```
 - **ただの別名**: 何も生成されません。既存の型に別の名前を付けるだけです
-  ```scheme
+  ```clojure
   (type-alias Email String)
   ; Email は String の別名
   ; 特別なコンストラクタやアクセサは生成されない
   ```
 - **多相性**: 特定の構造を持つあらゆる型で動作する関数を書けます
-  ```scheme
+  ```clojure
   (def distance (p : {.x Int .y Int}) ...)
   ; Point として定義された値でも Vec2 として定義された値でも使える
   ```
 - **型名付きアクセサは存在しない**: alias なので、`Type.field` 形式のアクセサは生成されません
-  ```scheme
+  ```clojure
   (v : Vec2)
   (def v {.x 10 .y 20})
   ; Vec2.x は存在しない
@@ -307,7 +307,7 @@ type-alias は単なる型の別名なので、コンストラクタ関数は生
 
 ## 直和型（TODO）
 
-```scheme
+```clojure
 ; TODO: 直和型の定義
 (type Maybe a
   Nothing
@@ -316,7 +316,7 @@ type-alias は単なる型の別名なので、コンストラクタ関数は生
 
 ## パターンマッチング（TODO）
 
-```scheme
+```clojure
 ; TODO: レコード型のパターンマッチング
 (match point
   {.x 0 .y 0}     ; 原点にマッチ
@@ -332,12 +332,12 @@ type-alias は単なる型の別名なので、コンストラクタ関数は生
 
 ## レコードの更新（TODO）
 
-```scheme
+```clojure
 ; TODO: immutableな更新構文
 ```
 
 ## ガード条件（TODO）
 
-```scheme
+```clojure
 ; TODO: パターンマッチングでの条件分岐
 ```

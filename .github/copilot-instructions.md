@@ -21,7 +21,7 @@
 
 - 関数定義
 
-```scheme
+```clojure
 ; 正しい
 (def (f arg1 arg2 ...)
   body)
@@ -33,7 +33,7 @@
 
 - 演算子
 
-```scheme
+```clojure
 ; 正しい
 (+ a b)
 (a + b)
