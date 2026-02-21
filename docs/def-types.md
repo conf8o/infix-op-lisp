@@ -35,7 +35,7 @@
 
 ### defstruct
 
-直積型(構造体, タプル)に特化したdeftypeの糖衣構文です。コンストラクタやアクセサ関数を自動生成します。
+直積型(レコード, タプル)に特化したdeftypeの糖衣構文です。コンストラクタやアクセサを自動生成します。
 
 ```scheme
 (defstruct Point {.x Int .y Int})
@@ -98,14 +98,12 @@
 
 
 (defalias Vec2 {.x Int .y Int})
-; 何も生成されない（ただの別名）
+; ただの別名なので、何も生成されない
 ```
 
 ## 値の構築
 
 ### deftype/defstruct の場合
-
-**型構成子**（パターンマッチ可能）：
 
 ```scheme
 (deftype Point (Point {.x Int .y Int}))
@@ -118,20 +116,18 @@
 (Point (record .x 10 .y 20))
 ```
 
-**コンストラクタ関数**（高階関数で使用、defstruct のみ）：
+**コンストラクタ**（defstructのみ）：
 
 ```scheme
 (defstruct Point {.x Int .y Int})
 
 (def p (Point.make 10 20))
 
-; 部分適用・高階関数
-(map Point.make xs ys)
+; 例
+(map2 Point.make xs ys)
 ```
 
 ### defalias の場合
-
-構造リテラルのみ（型推論文脈が必要）：
 
 ```scheme
 (defalias Vec2 {.x Int .y Int})
@@ -147,7 +143,7 @@
 
 ```scheme
 (def (make-vec2 x y) {.x x .y y})
-(map make-vec2 xs ys)
+(map2 make-vec2 xs ys)
 ```
 
 ## フィールドアクセス
@@ -162,11 +158,11 @@
 (Point.x p)  ; => 10
 (Point.y p)  ; => 20
 
-; 高階関数で使用
+; 例
 (map Point.x points)
 ```
 
-**注記**: アクセサ関数（`Point.x`, `Point.y`）は defstruct で自動生成されます。deftype の場合は手動で定義する必要があります。
+**注**: アクセサ（`Point.x`, `Point.y`）は defstruct で自動生成されます。deftype の場合は手動で定義する必要があります。
 
 ### defalias の場合
 
@@ -183,13 +179,11 @@
 (.y v)  ; => 20
 ```
 
-変数の型から構造体定義を参照し、フィールドの存在を確認します。
+変数の型からレコードの定義を参照し、フィールドの存在を確認します。
 
 ## パターンマッチング
 
 ### deftype/defstruct の場合
-
-型構成子による構築とマッチングは対称的：
 
 ```scheme
 (deftype Point (Point {.x Int .y Int}))
@@ -202,7 +196,7 @@
 ; マッチング
 (match p
   (Point {.x 0 .y 0}) "origin"
-  (Point {.x x .y y}) (+ x y))
+  (Point {.x x .y y}) (x + y))
 ```
 
 直和型（列挙型）の場合：
@@ -219,21 +213,20 @@
 (def s3 (Triangle 3 4 5))
 
 ; マッチング
+(area : (Shape -> Float))
 (def (area shape)
   (match shape
-    (Rectangle w h) (* w h)
-    (Circle r) (* 3.14 (* r r))
+    (Rectangle w h) (w * h)
+    (Circle r) (3.14 * r * r)
     (Triangle a b c) 
       ; ヘロンの公式
-      (let ((s (/ (+ a (+ b c)) 2)))
-        (sqrt (* s (* (- s a) (* (- s b) (- s c))))))))
+      (let ((s ((a + b + c) / 2)))
+        (sqrt (s * (s - a) * (s - b) * (s - c))))))
 ```
 
-**注記**: コンストラクタ関数（`Point.make`）はマッチングで使えません。マッチングには型構成子（`Point`, `Rectangle`, `Circle` など）を使います。
+**注**: コンストラクタ関数（`Point.make`）はマッチングで使えません。マッチングには型構成子（`Point`, `Rectangle`, `Circle` など）を使います。
 
 ### defalias の場合
-
-構造リテラルでマッチング：
 
 ```scheme
 (defalias Vec2 {.x Int .y Int})
@@ -245,5 +238,5 @@
 ; マッチング
 (match v
   {.x 0 .y 0} "origin"
-  {.x x .y y} (+ x y))
+  {.x x .y y} (x + y))
 ```

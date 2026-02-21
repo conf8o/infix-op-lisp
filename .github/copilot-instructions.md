@@ -11,10 +11,11 @@
 
 ドキュメント `docs` 配下のファイルを参照してください。
 
+- `docs/basic-data-structures.md`
 - `docs/basic-syntax.md`
-- `docs/infix-operators.md`
-- `docs/collection-types.md`
 - `docs/def-types.md`
+- `docs/infix-operators.md`
+- `docs/type-declaration.md`
 
 ## 構文の正誤についての特筆事項
 
@@ -46,3 +47,11 @@
 # ドキュメント更新の注意事項
 
 - ステータスがARCHIVEDのドキュメントは更新しないこと。特別指示がない限り参照しないこと。必要な場合は新しいドキュメントを作成すること。
+
+# 言葉遣い
+
+- 独自の熟語や造語は安易に作らないこと。用語として確立させていない場合は、助詞をつけること
+
+  - 例:
+    - 誤: レコード定義, 正: レコードの定義
+    - 誤: 二項ネスト正規形, 正: 二項演算のネストによる正規形

@@ -12,7 +12,7 @@
 
 - [基本構文](docs/basic-syntax.md)
   - コア機能（定義、束縛、パターンマッチング、条件分岐など）
-  - 演算子の表層形式
+  - 演算子の糖衣構文
   - モナドスタイル・アプリカティブスタイル構文
 
 - [中置演算子](docs/infix-operators.md)
@@ -21,7 +21,7 @@
 
 - [型宣言](docs/type-declaration.md)
 
-- [コレクション型](docs/collection-types.md)
+- [基本的なデータ構造](docs/basic-data-structures.md)
   - リスト、タプル、レコード、ハッシュマップ、配列
   - リテラル表現とパターンマッチング
 
