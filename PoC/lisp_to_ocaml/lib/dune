@@ -1,0 +1,3 @@
+(library
+ (name lisp_to_ocaml)
+ (libraries compiler-libs.common))

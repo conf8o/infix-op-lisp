@@ -1,0 +1,4 @@
+(executable
+ (public_name lisp_to_ocaml)
+ (name main)
+ (libraries lisp_to_ocaml))
