@@ -1,1 +1,0 @@
-let () = print_int (1 + 2); print_newline ()
