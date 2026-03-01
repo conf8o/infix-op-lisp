@@ -112,12 +112,28 @@ ParsetreeをOCamlソースコードとして整形出力するモジュール。
 
 ### Lisp ASTの定義
 
-現在の実装では、以下の簡易的なLisp ASTを定義しています：
+現在の実装では、以下のLisp ASTを定義しています：
 
 ```ocaml
-type lisp_expr =
+type var = string
+
+type binding_pattern =
+  | Var of var                      (* 変数 *)
+  | Fn of var * (var list)          (* 関数名と引数リスト *)
+
+type lisp =
   | Int of int                      (* 整数リテラル *)
-  | Add of lisp_expr * lisp_expr    (* 加算 *)
+  | Var of var                      (* 変数参照 *)
+  | List of lisp list               (* リスト（関数適用） *)
+  | Let of bindings * lisp          (* let束縛（未実装） *)
+  | If of bool * lisp * lisp        (* 条件分岐（未実装） *)
+  | Decl of declaration             (* 宣言 *)
+and declaration =
+  | Def of binding                  (* 定義 *)
+and binding =
+  binding_pattern * lisp
+and bindings =
+  binding list
 ```
 
 ### 変換ヘルパー関数
@@ -152,19 +168,6 @@ let to_constant_int_exp (n : int) : expression =
 **例:**
 - `to_constant_int_exp 42` → 整数リテラル `42`
 
-#### `to_unit_pat : unit -> pattern`
-
-unitパターン `()` を作成します。
-
-```ocaml
-let to_unit_pat () : pattern =
-  Pat.construct { txt = Lident "()"; loc = Location.none } None
-```
-
-**用途:**
-- 関数のunit引数: `fun () -> ...`
-- unit値の束縛: `let () = ...`
-
 #### `to_variable_pat : string -> pattern`
 
 変数パターンを作成します。
@@ -178,49 +181,30 @@ let to_variable_pat (name : string) : pattern =
 - `to_variable_pat "x"` → パターン `x`
 - `let x = ...` における `x` の部分
 
-#### `wrap_in_unit_function : expression -> expression`
-
-式を受け取り、それを `fun () -> expr` というunit引数の関数でラップします。
-
-**命名の意図:**
-- 式自体は関数ではないが、それを関数の本体として使う
-- 「式を関数式に変換する」のではなく「式を関数でラップする」という意図を明確に
-
-```ocaml
-let wrap_in_unit_function (body : expression) : expression =
-  let unit_param = {
-    pparam_loc = Location.none;
-    pparam_desc = Pparam_val (Nolabel, None, to_unit_pat ());
-  } in
-  Exp.function_ [unit_param] None (Pfunction_body body)
-```
-
-**詳細:**
-1. `function_param` レコードを構築
-   - `pparam_loc`: 位置情報（PoCでは `Location.none`）
-   - `pparam_desc`: パラメータの記述
-     - `Pparam_val (Nolabel, None, pattern)` - ラベルなし、デフォルト値なし、パターン
-2. `Exp.function_` でPexp_functionを構築
-   - 第1引数: パラメータリスト `[unit_param]`
-   - 第2引数: 型制約 `None`
-   - 第3引数: 関数本体 `Pfunction_body body`
-
-**注意:** 
-- OCaml 5.3では `Pexp_fun` が `Pexp_function` に統合されました
-- `function_param` を構築するヘルパーがないため、レコードを直接構築します
-
-### メイン変換関数: `to_ocaml_expr`
+### メイン変換関数: `to_ocaml_exp`
 
 Lisp ASTをOCaml Parsetreeの式に変換します。
 
 ```ocaml
-let rec to_ocaml_expr (e : lisp_expr) : expression =
+let rec to_ocaml_exp (e : lisp) : expression =
   match e with
   | Int n -> to_constant_int_exp n
-  | Add (a, b) ->
-      Exp.apply
-        (to_identifier_exp "+")
-        [ (Nolabel, to_ocaml_expr a); (Nolabel, to_ocaml_expr b) ]
+  | Var name -> to_identifier_exp name
+  | List items ->
+    (* Function application: (f arg1 arg2 ...) *)
+    (match items with
+    | [] -> failwith "Empty Cons is not a valid expression"
+    | [single] -> to_ocaml_exp single
+    | fn :: args ->
+        let fn_exp = to_ocaml_exp fn in
+        let arg_exps = List.map (fun arg -> (Nolabel, to_ocaml_exp arg)) args in
+        Exp.apply fn_exp arg_exps)
+  | Let (_bindings, _body) ->
+    failwith "not implemented"
+  | If (_pred, _then_expr, _else_expr) ->
+    failwith "not implemented"
+  | Decl _ ->
+      failwith "Def cannot be converted to expression; use to_structure instead"
 ```
 
 **変換の仕組み:**
@@ -228,48 +212,97 @@ let rec to_ocaml_expr (e : lisp_expr) : expression =
 1. **整数リテラル** (`Int n`)
    - `to_constant_int_exp n` で整数定数の式に変換
 
-2. **加算** (`Add (a, b)`)
-   - OCamlでは `a + b` は `(+) a b` の糖衣構文
+2. **変数参照** (`Var name`)
+   - `to_identifier_exp name` で変数参照の式に変換
+
+3. **リスト（関数適用）** (`List items`)
+   - Lispでは `(f arg1 arg2 ...)` の形式で関数適用を表現
+   - OCamlでは `f arg1 arg2` として表現
    - Parsetreeでは関数適用として表現
-   - 演算子 `+` を `to_identifier_exp` で識別子式に変換
+   - 先頭要素を関数として、残りを引数として変換
    - 引数には `Nolabel` を付与（名前付き引数ではないため）
-   - 再帰的に `a` と `b` を変換
+   - 例: `(+ x 1)` → `(+) x 1` → `x + 1`
 
-### トップレベル構造の生成: `to_toplevel_structure`
+4. **宣言** (`Decl _`)
+   - 式としては変換できないため、`to_structure` を使用する必要がある
 
-式を受け取り、`let generated () = expr` という形式のトップレベル定義を生成します。
+### トップレベル構造の生成: `to_structure`
+
+Lisp ASTを受け取り、OCamlのトップレベル定義（`structure`）を生成します。
 
 ```ocaml
-let to_toplevel_structure (expr : expression) : structure =
-  let function_expr = wrap_in_unit_function expr in
-  let value_binding =
-    Vb.mk (to_variable_pat "generated") function_expr
-  in
-  [ Str.value Nonrecursive [ value_binding ] ]
+let to_structure (e : lisp) : structure =
+  match e with
+  | Decl (Def (Var name, value)) ->
+      (* OCaml AST representation of: let name = value *)
+      [ Str.value Nonrecursive [ Vb.mk (to_variable_pat name) (to_ocaml_exp value) ] ]
+  | Decl (Def (Fn (name, args), body)) ->
+      (* OCaml AST representation of: let name arg1 arg2 ... = body *)
+      let body_exp = to_ocaml_exp body in
+      let params = match args with
+        | [] ->
+            (* No arguments: create unit parameter for fun () -> body *)
+            [{
+              pparam_loc = Location.none;
+              pparam_desc = Pparam_val (Nolabel, None, Pat.construct { txt = Lident "()"; loc = Location.none } None);
+            }]
+        | _ ->
+            (* Map each argument to a function parameter *)
+            List.map (fun arg ->
+              {
+                pparam_loc = Location.none;
+                pparam_desc = Pparam_val (Nolabel, None, to_variable_pat arg);
+              }
+            ) args
+      in
+      let fun_exp = Exp.function_ params None (Pfunction_body body_exp) in
+      [ Str.value Nonrecursive [ Vb.mk (to_variable_pat name) fun_exp ] ]
+  | _ ->
+      (* Other expressions are evaluated at top level: ;;expr *)
+      [ Str.eval (to_ocaml_exp e) ]
 ```
 
-**生成される構造:**
-```ocaml
-let generated () = expr
-```
+**生成される構造の種類:**
 
-**実装のポイント:**
+1. **変数定義** (`Decl (Def (Var name, value))`)
+   - Lisp: `(def x 10)`
+   - OCaml: `let x = 10`
 
-1. `wrap_in_unit_function` で式を関数でラップ
-   - `expr` → `fun () -> expr`
+2. **関数定義** (`Decl (Def (Fn (name, args), body))`)
+   - Lisp: `(def (main) (+ x 1))` （引数なし）
+   - OCaml: `let main () = x + 1`
+   - Lisp: `(def (add a b) (+ a b))` （引数あり）
+   - OCaml: `let add a b = a + b`
 
-2. `Vb.mk` で値束縛を作成
-   - パターン: `to_variable_pat "generated"` → 変数 `generated`
-   - 式: `function_expr` → `fun () -> expr`
+3. **その他の式**
+   - トップレベルで評価される式として扱う
 
-3. `Str.value` でトップレベル構造要素を作成
-   - `Nonrecursive` - 非再帰的な定義
-   - 値束縛のリスト `[value_binding]`
+**関数定義の実装のポイント:**
 
-**なぜこの形式か:**
-- `let generated () = expr` は `let generated = fun () -> expr` と等価
-- 関数定義の形式にすることで、後から `generated ()` で評価できる
-- print文などのノイズを排除し、純粋にLisp式の変換結果のみを表現
+1. **引数なしの場合**
+   - unit引数 `()` を持つ関数として生成
+   - `function_param` レコードを直接構築
+   - `pparam_desc` に `Pparam_val (Nolabel, None, unit_pattern)` を指定
+
+2. **引数ありの場合**
+   - 各引数を `function_param` に変換
+   - `List.map` で引数リストを `function_param` リストに変換
+   - 各引数は変数パターンとして扱う
+
+3. **関数式の構築**
+   - `Exp.function_` を使用して `Pexp_function` を構築
+   - 第1引数: パラメータリスト `params`
+   - 第2引数: 型制約 `None`
+   - 第3引数: 関数本体 `Pfunction_body body_exp`
+
+4. **トップレベル定義の生成**
+   - `Vb.mk` で値束縛を作成（パターン + 関数式）
+   - `Str.value Nonrecursive` でトップレベル定義を作成
+
+**注意点:**
+- OCaml 5.3では `function_param` を構築するヘルパーがないため、レコードを直接構築
+- `Pexp_function` は `fun` と `function` の両方を統一的に表現
+- 引数が複数ある場合、OCamlではカリー化された関数として扱われる
 
 ### ソースコードの出力
 
@@ -294,51 +327,61 @@ close_out oc
 
 **入力Lisp AST:**
 ```ocaml
-Add (Int 1, Int 2)
+let program = [
+  Decl (Def (Var "x", Int 10));  (* (def x 10) *)
+  Decl (Def (Fn ("main", []), List [Var "+"; Var "x"; Int 1]))  (* (def (main) (+ x 1)) *)
+]
 ```
 
-**生成されるOCamlコード** (generated.ml):
+**生成されるOCamlコード** (bin/generated.ml):
 ```ocaml
-let generated () = 1 + 2
+let x = 10
+let main () = x + 1
 ```
 
 **実行方法:**
 ```bash
 $ dune exec lisp_to_ocaml
-Wrote generated.ml
+Wrote bin/generated.ml
 
-$ ocaml generated.ml
-# 何も出力されない（関数定義のみ）
+$ ocaml bin/generated.ml
+# 何も出力されない（定義のみ）
 
 $ ocaml -stdin <<EOF
-#use "generated.ml";;
-generated ();;
+#use "bin/generated.ml";;
+main ();;
 EOF
-- : int = 3
+val x : int = 10
+val main : unit -> int = <fun>
+- : int = 11
 ```
 
 ## 拡張の方針
 
-現在は加算のみをサポートしていますが、以下のような拡張が考えられます：
+現在実装されている機能：
+- 変数参照と変数定義
+- 関数定義（引数なし/あり）
+- リスト形式による関数適用（演算子を含む）
+- 整数リテラル
 
-1. **他の二項演算子の追加**
-   - 減算、乗算、除算など
-   - `lisp_expr` に `Sub`, `Mul`, `Div` を追加
-   - `to_ocaml_expr` で対応する演算子名を使用
+今後の拡張として考えられる機能：
 
-2. **変数の参照**
-   - `lisp_expr` に `Var of string` を追加
-   - `to_ocaml_expr` で `to_identifier_exp` を使用
-
-3. **関数定義とlet束縛**
-   - より複雑なトップレベル構造の生成
+1. **let束縛（式レベル）**
+   - `Let of bindings * lisp` の実装
    - `Exp.let_` の使用
 
-4. **条件分岐**
+2. **条件分岐**
+   - `If of bool * lisp * lisp` の実装
    - `Exp.ifthenelse` の使用
 
-5. **パターンマッチ**
+3. **パターンマッチ**
    - `Exp.match_` の使用
+
+4. **再帰関数**
+   - `Str.value Recursive` の使用
+
+5. **その他のリテラル**
+   - 文字列、浮動小数点数、真偽値など
 
 ## OCaml 5.3における変更点
 
@@ -374,7 +417,7 @@ type function_param_desc =
 ```ocaml
 let unit_param = {
   pparam_loc = Location.none;
-  pparam_desc = Pparam_val (Nolabel, None, to_unit_pat ());
+  pparam_desc = Pparam_val (Nolabel, None, Pat.construct { txt = Lident "()"; loc = Location.none } None);
 }
 ```
 

@@ -1,2 +1,3 @@
-let x = 10
-;;x + 1
+let n = 10
+let f x = n + x
+let main () = f 10

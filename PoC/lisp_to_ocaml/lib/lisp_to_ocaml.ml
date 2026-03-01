@@ -7,19 +7,25 @@ open Parsetree
 open Longident
 open Ast_helper
 
-type def_pattern =
-  | Var of string
-  | Fn of string * (string list)
+type var = string
+
+type binding_pattern =
+  | Val of var
+  | Fn of var * (var list)
 
 type lisp =
   | Int of int
-  | Var of string
+  | Sym of var
   | List of lisp list
-  | Special of special
-
-and special =
-  Def of def_pattern * lisp
-
+  | Let of bindings * lisp
+  | If of bool * lisp * lisp
+  | Decl of declaration
+and declaration =
+  | Def of binding
+and binding =
+  binding_pattern * lisp
+and bindings =
+  binding list
 
 (* Create an identifier expression (e.g., variable reference, operator, function name) *)
 let to_identifier_exp (name : string) : expression =
@@ -41,39 +47,68 @@ let to_variable_pat (name : string) : pattern =
 let rec to_ocaml_exp (e : lisp) : expression =
   match e with
   | Int n -> to_constant_int_exp n
-  | Var name -> to_identifier_exp name
+  | Sym name -> to_identifier_exp name
   | List items ->
-      (* Function application: (f arg1 arg2 ...) *)
-      (match items with
-      | [] -> failwith "Empty Cons is not a valid expression"
-      | [single] -> to_ocaml_exp single
-      | fn :: args ->
-          (* Convert to OCaml function application *)
-          let fn_exp = to_ocaml_exp fn in
-          let arg_exps = List.map (fun arg -> (Nolabel, to_ocaml_exp arg)) args in
-          Exp.apply fn_exp arg_exps)
-  | Special (Def _) ->
-      (* Def should be converted to structure, not expression *)
+    (* Function application: (f arg1 arg2 ...) *)
+    (match items with
+    | [] -> failwith "Empty Cons is not a valid expression"
+    | [single] -> to_ocaml_exp single
+    | fn :: args ->
+        (* Convert to OCaml function application *)
+        let fn_exp = to_ocaml_exp fn in
+        let arg_exps = List.map (fun arg -> (Nolabel, to_ocaml_exp arg)) args in
+        Exp.apply fn_exp arg_exps)
+  | Let (_bindings, _body) ->
+    failwith "`Let` isn't implemented"
+  | If (_pred, _then_expr, _else_expr) ->
+    failwith "`If` isn't implemented"  
+  | Decl _ ->
       failwith "Def cannot be converted to expression; use to_structure instead"
 
 (* Convert Lisp AST to OCaml Parsetree structure *)
 let to_structure (e : lisp) : structure =
   match e with
-  | Special (Def (Var name, value)) ->
+  | Decl (Def (Val name, value)) ->
       (* OCaml AST representation of: let name = value *)
       [ Str.value Nonrecursive [ Vb.mk (to_variable_pat name) (to_ocaml_exp value) ] ]
-  | Special (Def (Fn (_name, _args), _body)) ->
-      (* TODO: implement function definition *)
-      failwith "Function definition not yet implemented"
+  | Decl (Def (Fn (name, args), body)) ->
+      (* OCaml AST representation of: let name arg1 arg2 ... = body *)
+      let body_exp = to_ocaml_exp body in
+      let params = match args with
+        | [] ->
+            (* No arguments: create unit parameter for fun () -> body *)
+            [{
+              pparam_loc = Location.none;
+              pparam_desc = Pparam_val (Nolabel, None, Pat.construct { txt = Lident "()"; loc = Location.none } None);
+            }]
+        | _ ->
+            (* Map each argument to a function parameter *)
+            List.map (fun arg ->
+              {
+                pparam_loc = Location.none;
+                pparam_desc = Pparam_val (Nolabel, None, to_variable_pat arg);
+              }
+            ) args
+      in
+      let fun_exp = Exp.function_ params None (Pfunction_body body_exp) in
+      [ Str.value Nonrecursive [ Vb.mk (to_variable_pat name) fun_exp ] ]
   | _ ->
       (* Other expressions are evaluated at top level: ;;expr *)
       [ Str.eval (to_ocaml_exp e) ]
 
 let main () =
-  (* Example inputs: (def x 10) and (+ x 1) *)
+  (* Example inputs:
+    (def x 10)
+    (def (f x) (+ n x))
+    (def (main) (f 10))
+  *)
   let program = [
-    Special (Def (Var "x", Int 10));  (* (def x 10) *)
-    List [Var "+"; Var "x"; Int 1]    (* (+ x 1) *)
+    (* (def n 10) *)
+    Decl (Def (Val "n", Int 10));
+    (* (def (f x) (+ n x))*)
+    Decl (Def (Fn ("f", ["x"]), List [Sym "+"; Sym "n"; Sym "x"]));
+    (* (def (main) (f 10)) *)
+    Decl (Def (Fn ("main", []), List [Sym "f"; Int 10]))
   ] in
   
   (* Convert each Lisp expression to structure items *)
