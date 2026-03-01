@@ -16,9 +16,9 @@ type binding_pattern =
 type lisp =
   | Int of int
   | Sym of var
-  | List of lisp list
+  | Apply of lisp list
   | Let of bindings * lisp
-  | If of bool * lisp * lisp
+  | If of lisp * lisp * lisp
   | Decl of declaration
 and declaration =
   | Def of binding
@@ -48,8 +48,7 @@ let rec to_ocaml_exp (e : lisp) : expression =
   match e with
   | Int n -> to_constant_int_exp n
   | Sym name -> to_identifier_exp name
-  | List items ->
-    (* Function application: (f arg1 arg2 ...) *)
+  | Apply items ->
     (match items with
     | [] -> failwith "Empty Cons is not a valid expression"
     | [single] -> to_ocaml_exp single
@@ -106,9 +105,9 @@ let main () =
     (* (def n 10) *)
     Decl (Def (Val "n", Int 10));
     (* (def (f x) (+ n x))*)
-    Decl (Def (Fn ("f", ["x"]), List [Sym "+"; Sym "n"; Sym "x"]));
+    Decl (Def (Fn ("f", ["x"]), Apply [Sym "+"; Sym "n"; Sym "x"]));
     (* (def (main) (f 10)) *)
-    Decl (Def (Fn ("main", []), List [Sym "f"; Int 10]))
+    Decl (Def (Fn ("main", []), Apply [Sym "f"; Int 10]))
   ] in
   
   (* Convert each Lisp expression to structure items *)
