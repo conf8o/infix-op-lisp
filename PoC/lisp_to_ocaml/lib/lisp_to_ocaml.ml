@@ -1,7 +1,3 @@
-(* lisp_to_ocaml.ml
-   Minimal: Lisp AST (Int, (+ a b)) -> OCaml Parsetree -> print OCaml source
-*)
-
 open Asttypes
 open Parsetree
 open Longident
