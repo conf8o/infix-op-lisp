@@ -13,19 +13,23 @@ type binding_pattern =
   | Val of var
   | Fn of var * (var list)
 
-type lisp =
+type lisp_expr =
   | Int of int
   | Sym of var
-  | Apply of lisp list
-  | Let of bindings * lisp
-  | If of lisp * lisp * lisp
-  | Decl of declaration
-and declaration =
-  | Def of binding
-and binding =
-  binding_pattern * lisp
+  | FnApply of lisp_expr list
+  | Let of bindings * lisp_expr
+  | If of lisp_expr * lisp_expr * lisp_expr
 and bindings =
   binding list
+and binding =
+  binding_pattern * lisp_expr
+
+type lisp_decl =
+  | Def of binding
+
+type lisp =
+  | Decl of lisp_decl
+  | Expr of lisp_expr
 
 (* Create an identifier expression (e.g., variable reference, operator, function name) *)
 let to_identifier_exp (name : string) : expression =
@@ -44,11 +48,11 @@ let to_variable_pat (name : string) : pattern =
   Pat.var { txt = name; loc = Location.none }
 
 (* Convert Lisp AST to OCaml Parsetree expression *)
-let rec to_ocaml_exp (e : lisp) : expression =
+let rec to_ocaml_exp (e : lisp_expr) : expression =
   match e with
   | Int n -> to_constant_int_exp n
   | Sym name -> to_identifier_exp name
-  | Apply items ->
+  | FnApply items ->
     (match items with
     | [] -> failwith "Empty Cons is not a valid expression"
     | [single] -> to_ocaml_exp single
@@ -60,9 +64,7 @@ let rec to_ocaml_exp (e : lisp) : expression =
   | Let (_bindings, _body) ->
     failwith "`Let` isn't implemented"
   | If (_pred, _then_expr, _else_expr) ->
-    failwith "`If` isn't implemented"  
-  | Decl _ ->
-      failwith "Def cannot be converted to expression; use to_structure instead"
+    failwith "`If` isn't implemented"
 
 (* Convert Lisp AST to OCaml Parsetree structure *)
 let to_structure (e : lisp) : structure =
@@ -91,7 +93,7 @@ let to_structure (e : lisp) : structure =
       in
       let fun_exp = Exp.function_ params None (Pfunction_body body_exp) in
       [ Str.value Nonrecursive [ Vb.mk (to_variable_pat name) fun_exp ] ]
-  | _ ->
+  | Expr e ->
       (* Other expressions are evaluated at top level: ;;expr *)
       [ Str.eval (to_ocaml_exp e) ]
 
@@ -105,9 +107,9 @@ let main () =
     (* (def n 10) *)
     Decl (Def (Val "n", Int 10));
     (* (def (f x) (+ n x))*)
-    Decl (Def (Fn ("f", ["x"]), Apply [Sym "+"; Sym "n"; Sym "x"]));
+    Decl (Def (Fn ("f", ["x"]), FnApply [Sym "+"; Sym "n"; Sym "x"]));
     (* (def (main) (f 10)) *)
-    Decl (Def (Fn ("main", []), Apply [Sym "f"; Int 10]))
+    Decl (Def (Fn ("main", []), FnApply [Sym "f"; Int 10]))
   ] in
   
   (* Convert each Lisp expression to structure items *)
