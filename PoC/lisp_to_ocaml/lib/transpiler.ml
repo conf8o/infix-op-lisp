@@ -92,6 +92,59 @@ let fn_args_to_params (args : var list) : function_param list =
       args
 
 
+(* 指定された変数名が式の中に現れるかを判断し、再帰フラグを返す *)
+let rec judge_rec (name : var) (expr : lisp_expr) : rec_flag =
+  match expr with
+  | Int _ | Bool _ -> Nonrecursive
+  | Sym v ->
+    if v = name then
+      Recursive
+    else
+      Nonrecursive
+  | Fn (args, body) ->
+    (* 引数に同じ名前があればシャドーイングされているので再帰ではない *)
+    if List.mem name args then
+      Nonrecursive
+    else
+      judge_rec name body
+  | FnAp items ->
+    if List.exists (fun e -> judge_rec name e = Recursive) items then
+      Recursive
+    else
+      Nonrecursive
+  | Let (bindings, body) ->
+    (* letの束縛でシャドーイングされる可能性をチェック *)
+    let shadowed =
+      List.exists
+        (fun (pat, _) ->
+           match pat with
+           | Val v -> v = name
+           | Fn (v, _) -> v = name)
+        bindings
+    in
+    (* bindingの右辺には現れうる *)
+    let in_bindings = List.exists (fun (_, e) -> judge_rec name e = Recursive) bindings in
+    let contains =
+      if shadowed then
+        in_bindings
+      else
+        in_bindings || judge_rec name body = Recursive
+    in
+    if contains then
+      Recursive
+    else
+      Nonrecursive
+  | If (pred, then_expr, else_expr) ->
+    if
+      judge_rec name pred = Recursive
+      || judge_rec name then_expr = Recursive
+      || judge_rec name else_expr = Recursive
+    then
+      Recursive
+    else
+      Nonrecursive
+
+
 (* LispのASTをOCamlのParsetree式に変換する *)
 let rec to_ocaml_exp (e : lisp_expr) : expression =
   match e with
@@ -111,9 +164,13 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
        let arg_exps = List.map (fun arg -> Nolabel, to_ocaml_exp arg) args in
        Exp.apply fun_exp arg_exps)
   | Let (bindings, body) ->
-    let vbs = List.map binding_to_value_binding bindings in
     let body_exp = to_ocaml_exp body in
-    Exp.let_ Nonrecursive vbs body_exp
+    List.fold_right
+      (fun binding acc ->
+         let vb, rec_flag = binding_to_value_binding binding in
+         Exp.let_ rec_flag [ vb ] acc)
+      bindings
+      body_exp
   | If (pred, then_expr, else_expr) ->
     let pred_exp = to_ocaml_exp pred in
     let then_exp = to_ocaml_exp then_expr in
@@ -121,22 +178,24 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
     Exp.ifthenelse pred_exp then_exp (Some else_exp)
 
 
-(* bindingをvalue_bindingに変換する *)
-and binding_to_value_binding (b : binding) : value_binding =
+(* bindingをvalue_bindingに変換する（再帰フラグも返す） *)
+and binding_to_value_binding (b : binding) : value_binding * rec_flag =
   let pat, expr = b in
   match pat with
-  | Val name -> Vb.mk (to_variable_pat name) (to_ocaml_exp expr)
+  | Val name -> Vb.mk (to_variable_pat name) (to_ocaml_exp expr), Nonrecursive
   | Fn (name, args) ->
+    let rec_flag = judge_rec name expr in
     let fn_exp = to_ocaml_exp (Fn (args, expr)) in
-    Vb.mk (to_variable_pat name) fn_exp
+    Vb.mk (to_variable_pat name) fn_exp, rec_flag
 
 
 (* LispのASTをOCamlのParsetree構造に変換する *)
 let to_structure (e : lisp) : structure =
   match e with
   | Decl (Def binding) ->
-    (* OCamlのAST表現: let name = value *)
-    [ Str.value Nonrecursive [ binding_to_value_binding binding ] ]
+    let vb, rec_flag = binding_to_value_binding binding in
+    (* OCamlのAST表現: let name = value または let rec name = value *)
+    [ Str.value rec_flag [ vb ] ]
   | Expr e ->
     (* その他の式はトップレベルで評価される: ;;expr *)
     [ Str.eval (to_ocaml_exp e) ]
@@ -151,10 +210,15 @@ let main () =
        (if is_positive 100 -100))
      (def (abs x)
        (if (< x 0) (- 0 x) x))
+     (def (fact n)
+       (if (= n 0)
+         1
+         (* n (fact (- n 1)))))
      (def (main)
-       (let (y 20)
+       (let (y 20
+             z (+ y 100))
          (f y)))
-  *)
+  *)*)
   let program =
     [ Decl (Def (Val "n", Int 10))
     ; Decl (Def (Val "is_positive", Bool true))
@@ -167,7 +231,24 @@ let main () =
                ( FnAp [ Sym "<"; Sym "x"; Int 0 ]
                , FnAp [ Sym "-"; Int 0; Sym "x" ]
                , Sym "x" ) ))
-    ; Decl (Def (Fn ("main", []), Let ([ Val "y", Int 20 ], FnAp [ Sym "f"; Sym "y" ])))
+    ; (* 再帰関数の例: 階乗 *)
+      Decl
+        (Def
+           ( Fn ("fact", [ "n" ])
+           , If
+               ( FnAp [ Sym "="; Sym "n"; Int 0 ]
+               , Int 1
+               , FnAp
+                   [ Sym "*"
+                   ; Sym "n"
+                   ; FnAp [ Sym "fact"; FnAp [ Sym "-"; Sym "n"; Int 1 ] ]
+                   ] ) ))
+    ; Decl
+        (Def
+           ( Fn ("main", [])
+           , Let
+               ( [ Val "y", Int 20; Val "z", FnAp [ Sym "+"; Sym "y"; Int 100 ] ]
+               , FnAp [ Sym "f"; Sym "z" ] ) ))
     ]
   in
 
