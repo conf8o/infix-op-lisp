@@ -99,7 +99,7 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
     Exp.function_ params None (Pfunction_body body_exp)
   | FnAp items ->
     (match items with
-     | [] -> failwith "Empty Cons is not a valid expression"
+     | [] -> to_unit_exp ()
      | [ single ] -> to_ocaml_exp single
      | fn :: args ->
        let fun_exp = to_ocaml_exp fn in
