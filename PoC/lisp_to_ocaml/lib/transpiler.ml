@@ -3,20 +3,17 @@ open Parsetree
 open Longident
 open Ast_helper
 
+(* 命名に関する注記 OCaml:
+   - Exp: Expression. OCamlの式を表す型
+   - Pat: Pattern. OCamlのパターンを表す型
+   - Str: Structure. OCamlの構造体（トップレベルの宣言）を表す型
+   - Fun: Function. OCamlの関数を表す型
 
-(* 命名に関する注記
-
-  OCaml:
-  - Exp: Expression. OCamlの式を表す型
-  - Pat: Pattern. OCamlのパターンを表す型
-  - Str: Structure. OCamlの構造体（トップレベルの宣言）を表す型
-  - Fun: Function. OCamlの関数を表す型
-
-  Lisp:
-  - Expr: Expression. Lispの式を表す型。衝突を避けるため、exprとしている。
-  - Patt: Pattern. Lispのパターンを表す型。衝突を避けるため、pattとしている。
-  - Decl: Declaration. Lispの宣言を表す型。Strと対応する。
-  - Fn: Function. Lispの関数を表す型。衝突を避けるため、fnとしている。funcでないのは、無名関数をfnで表すため。
+   Lisp:
+   - Expr: Expression. Lispの式を表す型。読む際の勘違い等を避けるため、exprとしている。
+   - Patt: Pattern. Lispのパターンを表す型。読む際の勘違い等を避けるため、pattとしている。
+   - Decl: Declaration. Lispの宣言を表す型。Strと対応する。
+   - Fn: Function. Lispの関数を表す型。読む際の衝突を避けるため、fnとしている。funcでないのは、無名関数をfnで表すため。
 *)
 
 type var = string
@@ -43,26 +40,34 @@ type lisp =
   | Decl of lisp_decl
   | Expr of lisp_expr
 
-(* Create an identifier expression (e.g., variable reference, operator, function name) *)
+(* 識別子式を作成する（例: 変数参照、演算子、関数名） *)
 let to_identifier_exp (name : string) : expression =
   Exp.ident { txt = Lident name; loc = Location.none }
 
 
-(* Create an integer constant expression *)
+(* 整数定数式を作成する *)
 let to_constant_int_exp (n : int) : expression = Exp.constant (Const.int n)
 
-(* Create a boolean constant expression *)
+(* 真偽値定数式を作成する *)
 let to_constant_bool_exp (b : bool) : expression =
-  Exp.construct 
-    { txt = Lident (if b then "true" else "false"); loc = Location.none } 
+  Exp.construct
+    { txt =
+        Lident
+          (if b then
+             "true"
+           else
+             "false")
+    ; loc = Location.none
+    }
     None
 
-(* Create a unit expression: () *)
+
+(* unit式を作成する: `()` *)
 let to_unit_exp () : expression =
   Exp.construct { txt = Lident "()"; loc = Location.none } None
 
 
-(* Create a variable pattern *)
+(* 変数パターンを作成する *)
 let to_variable_pat (name : string) : pattern =
   Pat.var { txt = name; loc = Location.none }
 
@@ -70,7 +75,7 @@ let to_variable_pat (name : string) : pattern =
 let fn_args_to_params (args : var list) : function_param list =
   match args with
   | [] ->
-    (* No arguments: create unit parameter for fun () -> body *)
+    (* 引数なし: fun () -> body のためのunitパラメータを作成 *)
     [ { pparam_loc = Location.none
       ; pparam_desc =
           Pparam_val
@@ -78,7 +83,7 @@ let fn_args_to_params (args : var list) : function_param list =
       }
     ]
   | _ ->
-    (* Map each argument to a function parameter *)
+    (* 各引数を関数パラメータにマップ *)
     List.map
       (fun arg ->
          { pparam_loc = Location.none
@@ -87,7 +92,7 @@ let fn_args_to_params (args : var list) : function_param list =
       args
 
 
-(* Convert Lisp AST to OCaml Parsetree expression *)
+(* LispのASTをOCamlのParsetree式に変換する *)
 let rec to_ocaml_exp (e : lisp_expr) : expression =
   match e with
   | Int n -> to_constant_int_exp n
@@ -115,9 +120,10 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
     let else_exp = to_ocaml_exp else_expr in
     Exp.ifthenelse pred_exp then_exp (Some else_exp)
 
-(* Convert binding to value_binding *)
+
+(* bindingをvalue_bindingに変換する *)
 and binding_to_value_binding (b : binding) : value_binding =
-  let (pat, expr) = b in
+  let pat, expr = b in
   match pat with
   | Val name -> Vb.mk (to_variable_pat name) (to_ocaml_exp expr)
   | Fn (name, args) ->
@@ -125,51 +131,50 @@ and binding_to_value_binding (b : binding) : value_binding =
     Vb.mk (to_variable_pat name) fn_exp
 
 
-(* Convert Lisp AST to OCaml Parsetree structure *)
+(* LispのASTをOCamlのParsetree構造に変換する *)
 let to_structure (e : lisp) : structure =
   match e with
   | Decl (Def binding) ->
-    (* OCaml AST representation of: let name = value *)
+    (* OCamlのAST表現: let name = value *)
     [ Str.value Nonrecursive [ binding_to_value_binding binding ] ]
   | Expr e ->
-    (* Other expressions are evaluated at top level: ;;expr *)
+    (* その他の式はトップレベルで評価される: ;;expr *)
     [ Str.eval (to_ocaml_exp e) ]
 
 
 let main () =
-  (* Example inputs:
+  (* 入力例:
      (def n 10)
      (def is_positive true)
      (def (f x) (+ n x))
      (def (test_if)
        (if is_positive 100 -100))
      (def (abs x)
-       (if (< x 0)
-         (- 0 x)
-         x))
-     (def (main) 
-       (let (y 20) 
+       (if (< x 0) (- 0 x) x))
+     (def (main)
+       (let (y 20)
          (f y)))
   *)
   let program =
     [ Decl (Def (Val "n", Int 10))
     ; Decl (Def (Val "is_positive", Bool true))
     ; Decl (Def (Fn ("f", [ "x" ]), FnAp [ Sym "+"; Sym "n"; Sym "x" ]))
-    ; Decl (Def (Fn ("test_if", []),
-        If (Sym "is_positive", Int 100, Int (-100))))
-    ; Decl (Def (Fn ("abs", [ "x" ]),
-        If (FnAp [ Sym "<"; Sym "x"; Int 0 ], 
-            FnAp [ Sym "-"; Int 0; Sym "x" ],
-            Sym "x")))
-    ; Decl (Def (Fn ("main", []), 
-        Let ([ Val "y", Int 20 ], FnAp [ Sym "f"; Sym "y" ])))
+    ; Decl (Def (Fn ("test_if", []), If (Sym "is_positive", Int 100, Int (-100))))
+    ; Decl
+        (Def
+           ( Fn ("abs", [ "x" ])
+           , If
+               ( FnAp [ Sym "<"; Sym "x"; Int 0 ]
+               , FnAp [ Sym "-"; Int 0; Sym "x" ]
+               , Sym "x" ) ))
+    ; Decl (Def (Fn ("main", []), Let ([ Val "y", Int 20 ], FnAp [ Sym "f"; Sym "y" ])))
     ]
   in
 
-  (* Convert each Lisp expression to structure items *)
+  (* 各Lisp式を構造項目に変換する *)
   let structures = List.concat_map to_structure program in
 
-  (* Pretty-print OCaml structure from Parsetree *)
+  (* ParsetreeからOCaml構造を整形して出力する *)
   let oc = open_out "bin/generated.ml" in
   let fmt = Format.formatter_of_out_channel oc in
   Pprintast.structure fmt structures;
