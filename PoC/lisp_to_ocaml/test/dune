@@ -1,2 +1,4 @@
 (test
- (name test_lisp_to_ocaml))
+ (name test_transpiler)
+ (modules test_transpiler)
+ (libraries lisp_to_ocaml))

@@ -1,6 +1,6 @@
 # infix-op-lisp
 
-中置演算子を標準でサポートするLisp系関数型言語の仕様書です。Clojure, Dr.Racket, Haskell, Elm, OCamlをベースに、シンプルで一貫性のある構文を目指しています。
+中置演算子を標準でサポートするLisp系関数型言語の実験です。Clojure, Racket, Haskell, Elm, OCamlをベースに、他言語の慣例も取り入れたシンプルで一貫性のある構文を目指します。
 
 ## 基本理念
 
