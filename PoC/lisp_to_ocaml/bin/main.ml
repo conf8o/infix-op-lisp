@@ -2,83 +2,100 @@ open Lisp_to_ocaml.Transpiler
 
 let () =
   print_endline "start";
-  (* 入力例:
-     (def n 10)
-     (def is_positive true)
-     (def (f x) (+ n x))
-     (def (test_if)
-       (if is_positive 100 -100))
-     (def (abs x)
-       (if (< x 0) (- 0 x) x))
-     (def (fact n)
-       (if (= n 0)
-         1
-         (* n (fact (- n 1)))))
-     (def (main)
-       (let (y 20
-             z (+ y 100))
-         (f y)))
-     ; リストのテスト
-     (def empty_list [])
-     (def nums [1 2 3])
-     (def (list_sum lst)
+  (* クイックソートの実装例（無名関数を使用）
+     
+     (def (filter pred lst)
        (match lst
-         [] 0
-         (:: x xs) (+ x (list_sum xs))))
-  *)*)
+         [] []
+         (:: x xs) (if (pred x)
+                     (:: x (filter pred xs))
+                     (filter pred xs))))
+     
+     (def (append lst1 lst2)
+       (match lst1
+         [] lst2
+         (:: x xs) (:: x (append xs lst2))))
+     
+     (def (quicksort lst)
+       (match lst
+         [] []
+         (:: pivot rest)
+           (let (smaller (filter (fn (x) (< x pivot)) rest)
+                 greater (filter (fn (x) (>= x pivot)) rest))
+             (append (append (quicksort smaller) (:: pivot []))
+                     (quicksort greater)))))
+     
+     (def unsorted [3 1 4 1 5 9 2 6])
+     (def sorted (quicksort unsorted))
+  *)
   let program =
-    [ Decl (Def (Val "n", Int 10))
-    ; Decl (Def (Val "is_positive", Bool true))
-    ; Decl (Def (Fn ("f", [ "x" ]), FnAp [ Sym "+"; Sym "n"; Sym "x" ]))
-    ; Decl (Def (Fn ("test_if", []), If (Sym "is_positive", Int 100, Int (-100))))
-    ; Decl
-        (Def
-           ( Fn ("abs", [ "x" ])
-           , If
-               ( FnAp [ Sym "<"; Sym "x"; Int 0 ]
-               , FnAp [ Sym "-"; Int 0; Sym "x" ]
-               , Sym "x" ) ))
-    ; (* 再帰関数の例: 階乗 *)
+    [ (* 高階関数: filter - 述語関数を受け取る *)
       Decl
         (Def
-           ( Fn ("fact", [ "n" ])
-           , If
-               ( FnAp [ Sym "="; Sym "n"; Int 0 ]
-               , Int 1
-               , FnAp
-                   [ Sym "*"
-                   ; Sym "n"
-                   ; FnAp [ Sym "fact"; FnAp [ Sym "-"; Sym "n"; Int 1 ] ]
-                   ] ) ))
-    ; Decl
-        (Def
-           ( Fn ("main", [])
-           , Let
-               ( [ Val "y", Int 20; Val "z", FnAp [ Sym "+"; Sym "y"; Int 100 ] ]
-               , FnAp [ Sym "f"; Sym "z" ] ) ))
-    ; (* リストのテスト *)
-      Decl (Def (Val "empty_list", List []))
-    ; Decl (Def (Val "nums", List [ Int 1; Int 2; Int 3 ]))
-    ; (* match式のテスト: リストの合計 *)
-      Decl
-        (Def
-           ( Fn ("list_sum", [ "lst" ])
+           ( Fn ("filter", [ "pred"; "lst" ])
            , Match
                ( Sym "lst"
-               , [ List [], Int 0
+               , [ List [], List []
                  ; ( Cons (Bind "x", Bind "xs")
-                   , FnAp [ Sym "+"; Sym "x"; FnAp [ Sym "list_sum"; Sym "xs" ] ] )
+                   , If
+                       ( FnAp [ Sym "pred"; Sym "x" ]
+                       , FnAp
+                           [ Sym "::"
+                           ; Sym "x"
+                           ; FnAp [ Sym "filter"; Sym "pred"; Sym "xs" ]
+                           ]
+                       , FnAp [ Sym "filter"; Sym "pred"; Sym "xs" ] ) )
                  ] ) ))
-    ; (* match式のテスト: リストの長さ *)
+    ; (* リストの連結 *)
       Decl
         (Def
-           ( Fn ("list_length", [ "lst" ])
+           ( Fn ("append", [ "lst1"; "lst2" ])
+           , Match
+               ( Sym "lst1"
+               , [ List [], Sym "lst2"
+                 ; ( Cons (Bind "x", Bind "xs")
+                   , FnAp
+                       [ Sym "::"; Sym "x"; FnAp [ Sym "append"; Sym "xs"; Sym "lst2" ] ]
+                   )
+                 ] ) ))
+    ; (* クイックソート - 無名関数を使ってfilterに述語を渡す *)
+      Decl
+        (Def
+           ( Fn ("quicksort", [ "lst" ])
            , Match
                ( Sym "lst"
-               , [ List [], Int 0
-                 ; ( Cons (Wildcard, Bind "xs")
-                   , FnAp [ Sym "+"; Int 1; FnAp [ Sym "list_length"; Sym "xs" ] ] )
+               , [ List [], List []
+                 ; ( Cons (Bind "pivot", Bind "rest")
+                   , Let
+                       ( [ ( Val "smaller"
+                           , FnAp
+                               [ Sym "filter"
+                               ; Fn ([ "x" ], FnAp [ Sym "<"; Sym "x"; Sym "pivot" ])
+                               ; Sym "rest"
+                               ] )
+                         ; ( Val "greater"
+                           , FnAp
+                               [ Sym "filter"
+                               ; Fn ([ "x" ], FnAp [ Sym ">="; Sym "x"; Sym "pivot" ])
+                               ; Sym "rest"
+                               ] )
+                         ]
+                       , FnAp
+                           [ Sym "append"
+                           ; FnAp
+                               [ Sym "append"
+                               ; FnAp [ Sym "quicksort"; Sym "smaller" ]
+                               ; List [ Sym "pivot" ]
+                               ]
+                           ; FnAp [ Sym "quicksort"; Sym "greater" ]
+                           ] ) )
                  ] ) ))
+    ; (* テストデータ *)
+      Decl
+        (Def
+           ( Val "unsorted"
+           , List [ Int 3; Int 1; Int 4; Int 1; Int 5; Int 9; Int 2; Int 6 ] ))
+    ; Decl (Def (Val "sorted", FnAp [ Sym "quicksort"; Sym "unsorted" ]))
     ]
   in
   (* 各Lisp式を構造項目に変換する *)
