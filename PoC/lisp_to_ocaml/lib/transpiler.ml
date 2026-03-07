@@ -189,7 +189,6 @@ let fn_args_to_params (args : var list) : function_param list =
       }
     ]
   | _ ->
-    (* 各引数を関数パラメータにマップ *)
     List.map
       (fun arg ->
          { pparam_loc = Location.none
@@ -310,8 +309,5 @@ let to_structure (e : lisp) : structure =
   match e with
   | Decl (Def binding) ->
     let vb, rec_flag = binding_to_value_binding binding in
-    (* OCamlのAST表現: let name = value または let rec name = value *)
     [ Str.value rec_flag [ vb ] ]
-  | Expr e ->
-    (* その他の式はトップレベルで評価される: ;;expr *)
-    [ Str.eval (to_ocaml_exp e) ]
+  | Expr e -> [ Str.eval (to_ocaml_exp e) ]

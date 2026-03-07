@@ -2,7 +2,7 @@ open Lisp_to_ocaml.Transpiler
 
 let () =
   print_endline "start";
-  (* クイックソートの実装例（無名関数を使用）
+  (* クイックソートの実装例
      
      (def (filter pred lst)
        (match lst
@@ -29,8 +29,7 @@ let () =
      (def sorted (quicksort unsorted))
   *)
   let program =
-    [ (* 高階関数: filter - 述語関数を受け取る *)
-      Decl
+    [ Decl
         (Def
            ( Fn ("filter", [ "pred"; "lst" ])
            , Match
@@ -46,8 +45,7 @@ let () =
                            ]
                        , FnAp [ Sym "filter"; Sym "pred"; Sym "xs" ] ) )
                  ] ) ))
-    ; (* リストの連結 *)
-      Decl
+    ; Decl
         (Def
            ( Fn ("append", [ "lst1"; "lst2" ])
            , Match
@@ -58,8 +56,7 @@ let () =
                        [ Sym "::"; Sym "x"; FnAp [ Sym "append"; Sym "xs"; Sym "lst2" ] ]
                    )
                  ] ) ))
-    ; (* クイックソート - 無名関数を使ってfilterに述語を渡す *)
-      Decl
+    ; Decl
         (Def
            ( Fn ("quicksort", [ "lst" ])
            , Match
@@ -90,17 +87,14 @@ let () =
                            ; FnAp [ Sym "quicksort"; Sym "greater" ]
                            ] ) )
                  ] ) ))
-    ; (* テストデータ *)
-      Decl
+    ; Decl
         (Def
            ( Val "unsorted"
            , List [ Int 3; Int 1; Int 4; Int 1; Int 5; Int 9; Int 2; Int 6 ] ))
     ; Decl (Def (Val "sorted", FnAp [ Sym "quicksort"; Sym "unsorted" ]))
     ]
   in
-  (* 各Lisp式を構造項目に変換する *)
   let structures = List.concat_map to_structure program in
-  (* ParsetreeからOCaml構造を整形して出力する *)
   let oc = open_out "bin/generated.ml" in
   let fmt = Format.formatter_of_out_channel oc in
   Pprintast.structure fmt structures;
