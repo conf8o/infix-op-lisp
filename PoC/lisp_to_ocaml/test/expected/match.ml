@@ -1,0 +1,1 @@
+let rec list_sum lst = match lst with | [] -> 0 | x::xs -> x + (list_sum xs)

@@ -1,4 +1,6 @@
 (test
  (name test_transpiler)
  (modules test_transpiler)
- (libraries lisp_to_ocaml))
+ (libraries lisp_to_ocaml alcotest)
+ (deps
+  (glob_files expected/*.ml)))
