@@ -52,7 +52,7 @@ type lisp =
   | Expr of lisp_expr
 
 (* ================================ *)
-(* === 式に関する補助関数 === *)
+(* 式に関する補助関数 *)
 (* ================================ *)
 
 (** 識別子式を作成する（例: 変数参照、演算子、関数名） *)
@@ -88,7 +88,7 @@ let to_empty_list_exp () : expression =
 
 
 (* ================================ *)
-(* === パターンマッチングに関する補助関数 === *)
+(* パターンマッチングに関する補助関数 *)
 (* ================================ *)
 
 (** 変数パターンを作成する *)
@@ -105,7 +105,7 @@ let to_empty_list_pat () : pattern =
 let to_wildcard_pat () : pattern = Pat.any ()
 
 (* ================================ *)
-(* === 再帰呼び出しに関する補助関数 === *)
+(* 再帰呼び出しに関する補助関数 *)
 (* ================================ *)
 
 (** nameに対してexpr内で再帰呼び出しが現れるかを判断する *)
@@ -176,7 +176,7 @@ let judge_rec (name : var) (expr : lisp_expr) : rec_flag =
 
 
 (* ================================ *)
-(* === OCaml parsetree への変換まわり === *)
+(* OCaml parsetree への変換まわり *)
 (* ================================ *)
 let fn_args_to_params (args : var list) : function_param list =
   match args with
@@ -311,3 +311,31 @@ let to_structure (e : lisp) : structure =
     let vb, rec_flag = binding_to_value_binding binding in
     [ Str.value rec_flag [ vb ] ]
   | Expr e -> [ Str.eval (to_ocaml_exp e) ]
+
+
+(* ================================ *)
+(* 型システムまわり *)
+(* ================================ *)
+
+type type_var = string
+
+type lisp_type =
+  | Int
+  | Bool
+  | Fn of lisp_type * lisp_type
+  | List of lisp_type
+  | Var of type_var
+
+type lisp_type_env = (var * lisp_type) list
+
+let init_type_env () : lisp_type_env =
+  [ "+", Fn (Int, Fn (Int, Int))
+  ; "-", Fn (Int, Fn (Int, Int))
+  ; "*", Fn (Int, Fn (Int, Int))
+  ; "<", Fn (Int, Fn (Int, Bool))
+  ; ">", Fn (Int, Fn (Int, Bool))
+  ; "=", Fn (Int, Fn (Int, Bool))
+  ; "<=", Fn (Int, Fn (Int, Bool))
+  ; ">=", Fn (Int, Fn (Int, Bool))
+  ; "::", Fn (Var "T", Fn (List (Var "T"), List (Var "T")))
+  ]
