@@ -1,3 +1,4 @@
+open Lisp_to_ocaml.Lisp_ast
 open Lisp_to_ocaml.Transpiler
 open Parsetree
 
