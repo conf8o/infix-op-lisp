@@ -29,15 +29,15 @@ type type_error =
   | TooManyArguments
 
 let init_type_env () : lisp_type_env =
-  [ "+", Fn (Int, Fn (Int, Int))
-  ; "-", Fn (Int, Fn (Int, Int))
-  ; "*", Fn (Int, Fn (Int, Int))
-  ; "<", Fn (Int, Fn (Int, Bool))
-  ; ">", Fn (Int, Fn (Int, Bool))
-  ; "=", Fn (Int, Fn (Int, Bool))
-  ; "<=", Fn (Int, Fn (Int, Bool))
-  ; ">=", Fn (Int, Fn (Int, Bool))
-  ; "::", Fn (Var "T", Fn (List (Var "T"), List (Var "T")))
+  [ ("+", top_level_scope_id), Fn (Int, Fn (Int, Int))
+  ; ("-", top_level_scope_id), Fn (Int, Fn (Int, Int))
+  ; ("*", top_level_scope_id), Fn (Int, Fn (Int, Int))
+  ; ("<", top_level_scope_id), Fn (Int, Fn (Int, Bool))
+  ; (">", top_level_scope_id), Fn (Int, Fn (Int, Bool))
+  ; ("=", top_level_scope_id), Fn (Int, Fn (Int, Bool))
+  ; ("<=", top_level_scope_id), Fn (Int, Fn (Int, Bool))
+  ; (">=", top_level_scope_id), Fn (Int, Fn (Int, Bool))
+  ; ("::", top_level_scope_id), Fn (Var "T", Fn (List (Var "T"), List (Var "T")))
   ]
 
 

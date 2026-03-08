@@ -4,3 +4,8 @@
  (libraries lisp_to_ocaml alcotest)
  (deps
   (glob_files expected/*.ml)))
+
+(test
+ (name test_lisp_ast)
+ (modules test_lisp_ast)
+ (libraries lisp_to_ocaml alcotest))

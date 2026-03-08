@@ -1,5 +1,1 @@
-let rec fact n =
-  if n = 0 then
-    1
-  else
-    n * fact (n - 1)
+let rec fact__1 n__2 = if n__2 = 0 then 1 else n__2 * (fact__1 (n__2 - 1))

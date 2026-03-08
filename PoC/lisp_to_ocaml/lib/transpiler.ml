@@ -57,8 +57,14 @@ let to_empty_list_exp () : expression =
 (* パターンマッチングに関する補助関数 *)
 (* ================================ *)
 
+let to_unique_var (v : var) : string =
+  let name, id = v in
+  Printf.sprintf "%s%s" name id
+
+
 (** 変数パターンを作成する *)
-let to_variable_pat (name : string) : pattern =
+let to_variable_pat (v : var) : pattern =
+  let name = to_unique_var v in
   Pat.var { txt = name; loc = Location.none }
 
 
@@ -105,7 +111,7 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
   match e with
   | Int n -> to_constant_int_exp n
   | Bool b -> to_constant_bool_exp b
-  | Sym name -> to_identifier_exp name
+  | Sym name -> to_identifier_exp (to_unique_var name)
   | Fn (args, body) ->
     let params = fn_args_to_params args in
     let body_exp = to_ocaml_exp body in

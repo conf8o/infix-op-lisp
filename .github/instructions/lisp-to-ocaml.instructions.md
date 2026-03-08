@@ -6,6 +6,17 @@
 - 関数名は意図が伝わる命名にする。意図が不明瞭な略語は使わない。
 - 入出力は別の関数を用意する
 
-## parsetreeを実装するにあたって参考にするドキュメント
+## 単体テスト
 
-PoC/lisp_to_ocaml/docs/parsetree_conversion.md
+- alcotest を使用する。
+- カバレッジはあまり気にしない。下記を重視する。
+  - 仕様としてのテストコード。コードの意図や表現が伝わる王道パターン
+  - 仕様として気にしたい部分のテスト。バグを起こしたくない動作
+
+### 作業するにあたり参考にするドキュメント
+
+- parsetree実装(lispからocamlに変換するときに使う)
+  - PoC/lisp_to_ocaml/docs/parsetree_conversion.md
+- lispにおける型システムの導入
+  - ADR/type-system.md
+ 

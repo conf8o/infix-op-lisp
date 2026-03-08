@@ -1,98 +1,109 @@
 open Lisp_to_ocaml.Lisp_ast
 open Lisp_to_ocaml.Transpiler
 
+let v0 name = make_var name ""
+
 let () =
   print_endline "start";
-  (* クイックソートの実装例
-     
-     (def (filter pred lst)
+  (* クイックソート
+     (def ((v0 "filter") pred lst)
        (match lst
          [] []
          (:: x xs) (if (pred x)
-                     (:: x (filter pred xs))
-                     (filter pred xs))))
+                     (:: x ((v0 "filter") pred xs))
+                     ((v0 "filter") pred xs))))
      
-     (def (append lst1 lst2)
+     (def ((v0 "append") lst1 lst2)
        (match lst1
          [] lst2
-         (:: x xs) (:: x (append xs lst2))))
+         (:: x xs) (:: x ((v0 "append") xs lst2))))
      
-     (def (quicksort lst)
+     (def ((v0 "quicksort") lst)
        (match lst
          [] []
-         (:: pivot rest)
-           (let (smaller (filter (fn (x) (< x pivot)) rest)
-                 greater (filter (fn (x) (>= x pivot)) rest))
-             (append (append (quicksort smaller) (:: pivot []))
-                     (quicksort greater)))))
+         (:: (v0 "pivot") (v0 "rest"))
+           (let ((v0 "smaller") ((v0 "filter") (fn (x) (< x (v0 "pivot"))) (v0 "rest"))
+                 (v0 "greater") ((v0 "filter") (fn (x) (>= x (v0 "pivot"))) (v0 "rest")))
+             ((v0 "append") ((v0 "append") ((v0 "quicksort") (v0 "smaller")) (:: (v0 "pivot") []))
+                     ((v0 "quicksort") (v0 "greater"))))))
      
-     (def unsorted [3 1 4 1 5 9 2 6])
-     (def sorted (quicksort unsorted))
+     (def (v0 "unsorted") [3 1 4 1 5 9 2 6])
+     (def sorted ((v0 "quicksort") (v0 "unsorted")))
   *)
   let program =
     [ Decl
         (Def
-           ( Fn ("filter", [ "pred"; "lst" ])
+           ( Fn (v0 "filter", [ v0 "pred"; v0 "lst1" ])
            , Match
-               ( Sym "lst"
+               ( Sym (v0 "lst1")
                , [ List [], List []
-                 ; ( Cons (Bind "x", Bind "xs")
+                 ; ( Cons (Bind (v0 "x2"), Bind (v0 "xs2"))
                    , If
-                       ( FnAp [ Sym "pred"; Sym "x" ]
+                       ( FnAp [ Sym (v0 "pred"); Sym (v0 "x2") ]
                        , FnAp
-                           [ Sym "::"
-                           ; Sym "x"
-                           ; FnAp [ Sym "filter"; Sym "pred"; Sym "xs" ]
+                           [ Sym (v0 "::")
+                           ; Sym (v0 "x2")
+                           ; FnAp [ Sym (v0 "filter"); Sym (v0 "pred"); Sym (v0 "xs2") ]
                            ]
-                       , FnAp [ Sym "filter"; Sym "pred"; Sym "xs" ] ) )
+                       , FnAp [ Sym (v0 "filter"); Sym (v0 "pred"); Sym (v0 "x2") ] ) )
                  ] ) ))
     ; Decl
         (Def
-           ( Fn ("append", [ "lst1"; "lst2" ])
+           ( Fn (v0 "append", [ v0 "lst1_3"; v0 "lst2_3" ])
            , Match
-               ( Sym "lst1"
-               , [ List [], Sym "lst2"
-                 ; ( Cons (Bind "x", Bind "xs")
+               ( Sym (v0 "lst1_3")
+               , [ List [], Sym (v0 "lst2_3")
+                 ; ( Cons (Bind (v0 "x4"), Bind (v0 "xs4"))
                    , FnAp
-                       [ Sym "::"; Sym "x"; FnAp [ Sym "append"; Sym "xs"; Sym "lst2" ] ]
-                   )
+                       [ Sym (v0 "::")
+                       ; Sym (v0 "x4")
+                       ; FnAp [ Sym (v0 "append"); Sym (v0 "xs4"); Sym (v0 "lst2_3") ]
+                       ] )
                  ] ) ))
     ; Decl
         (Def
-           ( Fn ("quicksort", [ "lst" ])
+           ( Fn (v0 "quicksort", [ v0 "lst5" ])
            , Match
-               ( Sym "lst"
+               ( Sym (v0 "lst5")
                , [ List [], List []
-                 ; ( Cons (Bind "pivot", Bind "rest")
+                 ; ( Cons (Bind (v0 "pivot"), Bind (v0 "rest"))
                    , Let
-                       ( [ ( Val "smaller"
+                       ( [ ( Val (v0 "smaller")
                            , FnAp
-                               [ Sym "filter"
-                               ; Fn ([ "x" ], FnAp [ Sym "<"; Sym "x"; Sym "pivot" ])
-                               ; Sym "rest"
+                               [ Sym (v0 "filter")
+                               ; Fn
+                                   ( [ v0 "x7" ]
+                                   , FnAp
+                                       [ Sym (v0 "<"); Sym (v0 "x7"); Sym (v0 "pivot") ]
+                                   )
+                               ; Sym (v0 "rest")
                                ] )
-                         ; ( Val "greater"
+                         ; ( Val (v0 "greater")
                            , FnAp
-                               [ Sym "filter"
-                               ; Fn ([ "x" ], FnAp [ Sym ">="; Sym "x"; Sym "pivot" ])
-                               ; Sym "rest"
+                               [ Sym (v0 "filter")
+                               ; Fn
+                                   ( [ v0 "x8" ]
+                                   , FnAp
+                                       [ Sym (v0 ">="); Sym (v0 "x8"); Sym (v0 "pivot") ]
+                                   )
+                               ; Sym (v0 "rest")
                                ] )
                          ]
                        , FnAp
-                           [ Sym "append"
+                           [ Sym (v0 "append")
                            ; FnAp
-                               [ Sym "append"
-                               ; FnAp [ Sym "quicksort"; Sym "smaller" ]
-                               ; List [ Sym "pivot" ]
+                               [ Sym (v0 "append")
+                               ; FnAp [ Sym (v0 "quicksort"); Sym (v0 "smaller") ]
+                               ; List [ Sym (v0 "pivot") ]
                                ]
-                           ; FnAp [ Sym "quicksort"; Sym "greater" ]
+                           ; FnAp [ Sym (v0 "quicksort"); Sym (v0 "greater") ]
                            ] ) )
                  ] ) ))
     ; Decl
         (Def
-           ( Val "unsorted"
+           ( Val (v0 "unsorted")
            , List [ Int 3; Int 1; Int 4; Int 1; Int 5; Int 9; Int 2; Int 6 ] ))
-    ; Decl (Def (Val "sorted", FnAp [ Sym "quicksort"; Sym "unsorted" ]))
+    ; Decl (Def (Val (v0 "sorted"), FnAp [ Sym (v0 "quicksort"); Sym (v0 "unsorted") ]))
     ]
   in
   let structures = List.concat_map to_structure program in
