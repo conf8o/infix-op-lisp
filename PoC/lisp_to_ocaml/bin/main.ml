@@ -6,29 +6,29 @@ let v0 name = make_var name ""
 let () =
   print_endline "start";
   (* クイックソート
-     (def ((v0 "filter") pred lst)
+     (def (filter pred lst)
        (match lst
          [] []
          (:: x xs) (if (pred x)
-                     (:: x ((v0 "filter") pred xs))
-                     ((v0 "filter") pred xs))))
+                     (:: x (filter pred xs))
+                     (filter pred xs))))
      
-     (def ((v0 "append") lst1 lst2)
+     (def (append lst1 lst2)
        (match lst1
          [] lst2
-         (:: x xs) (:: x ((v0 "append") xs lst2))))
+         (:: x xs) (:: x (append xs lst2))))
      
-     (def ((v0 "quicksort") lst)
+     (def (quicksort lst)
        (match lst
          [] []
-         (:: (v0 "pivot") (v0 "rest"))
-           (let ((v0 "smaller") ((v0 "filter") (fn (x) (< x (v0 "pivot"))) (v0 "rest"))
-                 (v0 "greater") ((v0 "filter") (fn (x) (>= x (v0 "pivot"))) (v0 "rest")))
-             ((v0 "append") ((v0 "append") ((v0 "quicksort") (v0 "smaller")) (:: (v0 "pivot") []))
-                     ((v0 "quicksort") (v0 "greater"))))))
+         (:: pivot rest)
+           (let (smaller (filter (fn (x) (< x pivot)) rest)
+                 greater (filter (fn (x) (>= x pivot)) rest))
+             (append (append (quicksort smaller) (:: pivot []))
+                     (quicksort greater)))))
      
-     (def (v0 "unsorted") [3 1 4 1 5 9 2 6])
-     (def sorted ((v0 "quicksort") (v0 "unsorted")))
+     (def unsorted [3 1 4 1 5 9 2 6])
+     (def sorted (quicksort unsorted))
   *)
   let program =
     [ Decl
