@@ -1,7 +1,7 @@
 open Lisp_to_ocaml.Lisp_ast
 open Lisp_to_ocaml.Transpiler
 
-let v name = make_var name ""
+let v = top_var
 
 let () =
   print_endline "start";

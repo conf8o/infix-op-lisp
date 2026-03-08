@@ -10,6 +10,7 @@ type var = string * scope_identifier
 
 let top_level_scope_id = ""
 let make_var s i = s, i
+let top_var s = make_var s top_level_scope_id
 
 type binding_patt =
   | Val of var
