@@ -45,7 +45,7 @@ let () =
                            ; Sym (v "x2")
                            ; FnAp [ Sym (v "filter"); Sym (v "pred"); Sym (v "xs2") ]
                            ]
-                       , FnAp [ Sym (v "filter"); Sym (v "pred"); Sym (v "x2") ] ) )
+                       , FnAp [ Sym (v "filter"); Sym (v "pred"); Sym (v "xs2") ] ) )
                  ] ) ))
     ; Decl
         (Def
