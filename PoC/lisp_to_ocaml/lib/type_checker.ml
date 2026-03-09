@@ -1,56 +1,6 @@
 open Lisp_ast
-
-(* ================================ *)
-(* 型システムまわり *)
-(* ================================ *)
-
-type type_var = string
-
-type lisp_type =
-  | Int
-  | Bool
-  | Fn of lisp_type * lisp_type
-  | List of lisp_type
-  | Var of type_var
-  | Unit
-
-type lisp_type_env = (var * lisp_type) list
-
-type type_error =
-  | UnboundVariable of var
-  | TypeMismatch of lisp_type * lisp_type
-  | ConditionNotBool of lisp_type
-  | BranchTypeMismatch of lisp_type * lisp_type
-  | NotAFunction of lisp_type
-  | EmptyList
-  | ListElementTypeMismatch
-  | EmptyMatch
-  | CannotInferFunctionType
-  | TooManyArguments
-
-let init_type_env () : lisp_type_env =
-  [ top_var "+", Fn (Int, Fn (Int, Int))
-  ; top_var "-", Fn (Int, Fn (Int, Int))
-  ; top_var "*", Fn (Int, Fn (Int, Int))
-  ; top_var "<", Fn (Int, Fn (Int, Bool))
-  ; top_var ">", Fn (Int, Fn (Int, Bool))
-  ; top_var "=", Fn (Int, Fn (Int, Bool))
-  ; top_var "<=", Fn (Int, Fn (Int, Bool))
-  ; top_var ">=", Fn (Int, Fn (Int, Bool))
-  ; top_var "::", Fn (Var "T", Fn (List (Var "T"), List (Var "T")))
-  ]
-
-
-(** 型環境から変数の型を検索する *)
-let lookup_type (env : lisp_type_env) (name : var) : (lisp_type, type_error) result =
-  match List.assoc_opt name env with
-  | Some ty -> Ok ty
-  | None -> Error (UnboundVariable name)
-
-
-(** 型環境に変数の型を追加する *)
-let extend_type_env (env : lisp_type_env) (name : var) (ty : lisp_type) : lisp_type_env =
-  (name, ty) :: env
+open Lisp_type
+open Type_system
 
 
 (** result型のbind操作 *)
@@ -58,7 +8,7 @@ let ( let* ) = Result.bind
 
 (** 式の型を判定する *)
 let rec judge_type (env : lisp_type_env) (expr : lisp_expr)
-  : (lisp_type, type_error) result
+  : (lisp_type, type_check_error) result
   =
   match expr with
   | Int _ -> Ok Int
@@ -74,7 +24,7 @@ let rec judge_type (env : lisp_type_env) (expr : lisp_expr)
 
 (** 関数の型を判定する *)
 and judge_fn_type (env : lisp_type_env) (args : var list) (body : lisp_expr)
-  : (lisp_type, type_error) result
+  : (lisp_type, type_check_error) result
   =
   match args with
   | [] ->
@@ -88,7 +38,7 @@ and judge_fn_type (env : lisp_type_env) (args : var list) (body : lisp_expr)
 
 (** 関数適用の型を判定する *)
 and judge_fnap_type (env : lisp_type_env) (items : lisp_expr list)
-  : (lisp_type, type_error) result
+  : (lisp_type, type_check_error) result
   =
   match items with
   | [] -> Error EmptyList
@@ -100,7 +50,7 @@ and judge_fnap_type (env : lisp_type_env) (items : lisp_expr list)
 
 (** 関数型に引数を適用した結果の型を判定する *)
 and judge_apply_type (env : lisp_type_env) (fn_type : lisp_type) (args : lisp_expr list)
-  : (lisp_type, type_error) result
+  : (lisp_type, type_check_error) result
   =
   match args with
   | [] -> Ok fn_type
@@ -117,7 +67,7 @@ and judge_apply_type (env : lisp_type_env) (fn_type : lisp_type) (args : lisp_ex
 
 (** let式の型を判定する *)
 and judge_let_type (env : lisp_type_env) (bindings : bindings) (body : lisp_expr)
-  : (lisp_type, type_error) result
+  : (lisp_type, type_check_error) result
   =
   let rec process_bindings env = function
     | [] -> judge_type env body
@@ -140,7 +90,7 @@ and judge_if_type
       (pred : lisp_expr)
       (then_expr : lisp_expr)
       (else_expr : lisp_expr)
-  : (lisp_type, type_error) result
+  : (lisp_type, type_check_error) result
   =
   let* pred_type = judge_type env pred in
   if pred_type <> Bool then
@@ -156,7 +106,7 @@ and judge_if_type
 
 (** リストの型を判定する *)
 and judge_list_type (env : lisp_type_env) (elements : lisp_expr list)
-  : (lisp_type, type_error) result
+  : (lisp_type, type_check_error) result
   =
   match elements with
   | [] -> Error EmptyList
@@ -179,7 +129,7 @@ and judge_match_type
       (env : lisp_type_env)
       (value : lisp_expr)
       (cases : matching_case list)
-  : (lisp_type, type_error) result
+  : (lisp_type, type_check_error) result
   =
   let* _value_type = judge_type env value in
   match cases with
