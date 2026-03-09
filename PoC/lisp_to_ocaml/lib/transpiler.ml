@@ -206,11 +206,15 @@ and to_match_case (case : matching_case) : case =
 and binding_to_value_binding (b : binding) : value_binding * rec_flag =
   let pat, expr = b in
   match pat with
-  | Val name -> Vb.mk (to_variable_pat name) (to_ocaml_exp expr), Nonrecursive
-  | Fn (name, args) ->
-    let rec_flag = judge_rec name expr in
-    let fn_exp = to_ocaml_exp (Fn (args, expr)) in
-    Vb.mk (to_variable_pat name) fn_exp, rec_flag
+  | Var name ->
+    (match expr with
+    | Fn (args, expr) ->
+        let rec_flag = judge_rec name expr in
+        let fn_exp = to_ocaml_exp (Fn (args, expr)) in
+        Vb.mk (to_variable_pat name) fn_exp, rec_flag
+    | _ ->
+        Vb.mk (to_variable_pat name) (to_ocaml_exp expr), Nonrecursive)
+    
 
 
 (** LispのASTをOCamlのParsetree構造に変換する *)

@@ -174,7 +174,7 @@ AST（抽象構文木）を構築する側は、以下の責任を持ちます:
 3. **同じスコープ内では同じvarを再利用する**
    ```ocaml
    let x = v "x" in
-   Let ([Val x, Int 10], FnAp [Sym x; Int 5])
+   Let ([Var x, Int 10], FnAp [Sym x; Int 5])
    (* 同じxを参照 *)
    ```
 

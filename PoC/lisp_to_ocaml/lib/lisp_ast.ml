@@ -13,8 +13,7 @@ let make_var s i = s, i
 let top_var s = make_var s top_level_scope_id
 
 type binding_patt =
-  | Val of var
-  | Fn of var * var list
+  | Var of var
 
 type matching_patt =
   | Bind of var
@@ -44,11 +43,6 @@ type lisp_decl = Def of binding
 type lisp =
   | Decl of lisp_decl
   | Expr of lisp_expr
-
-let extract_name (binding : binding_patt) : var =
-  match binding with
-  | Val name -> name
-  | Fn (name, _) -> name
 
 
 (* ================================ *)

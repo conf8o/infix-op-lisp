@@ -33,75 +33,81 @@ let () =
   let program =
     [ Decl
         (Def
-           ( Fn (v "filter", [ v "pred"; v "lst1" ])
-           , Match
-               ( Sym (v "lst1")
-               , [ List [], List []
-                 ; ( Cons (Bind (v "x2"), Bind (v "xs2"))
-                   , If
-                       ( FnAp [ Sym (v "pred"); Sym (v "x2") ]
+           ( Var (v "filter")
+           , Fn
+               ( [ v "pred"; v "lst1" ]
+               , Match
+                   ( Sym (v "lst1")
+                   , [ List [], List []
+                     ; ( Cons (Bind (v "x2"), Bind (v "xs2"))
+                       , If
+                           ( FnAp [ Sym (v "pred"); Sym (v "x2") ]
+                           , FnAp
+                               [ Sym (v "::")
+                               ; Sym (v "x2")
+                               ; FnAp [ Sym (v "filter"); Sym (v "pred"); Sym (v "xs2") ]
+                               ]
+                           , FnAp [ Sym (v "filter"); Sym (v "pred"); Sym (v "xs2") ] ) )
+                     ] ) ) ))
+    ; Decl
+        (Def
+           ( Var (v "append")
+           , Fn
+               ( [ v "lst1_3"; v "lst2_3" ]
+               , Match
+                   ( Sym (v "lst1_3")
+                   , [ List [], Sym (v "lst2_3")
+                     ; ( Cons (Bind (v "x4"), Bind (v "xs4"))
                        , FnAp
                            [ Sym (v "::")
-                           ; Sym (v "x2")
-                           ; FnAp [ Sym (v "filter"); Sym (v "pred"); Sym (v "xs2") ]
-                           ]
-                       , FnAp [ Sym (v "filter"); Sym (v "pred"); Sym (v "xs2") ] ) )
-                 ] ) ))
+                           ; Sym (v "x4")
+                           ; FnAp [ Sym (v "append"); Sym (v "xs4"); Sym (v "lst2_3") ]
+                           ] )
+                     ] ) ) ))
     ; Decl
         (Def
-           ( Fn (v "append", [ v "lst1_3"; v "lst2_3" ])
-           , Match
-               ( Sym (v "lst1_3")
-               , [ List [], Sym (v "lst2_3")
-                 ; ( Cons (Bind (v "x4"), Bind (v "xs4"))
-                   , FnAp
-                       [ Sym (v "::")
-                       ; Sym (v "x4")
-                       ; FnAp [ Sym (v "append"); Sym (v "xs4"); Sym (v "lst2_3") ]
-                       ] )
-                 ] ) ))
-    ; Decl
-        (Def
-           ( Fn (v "quicksort", [ v "lst5" ])
-           , Match
-               ( Sym (v "lst5")
-               , [ List [], List []
-                 ; ( Cons (Bind (v "pivot"), Bind (v "rest"))
-                   , Let
-                       ( [ ( Val (v "smaller")
+           ( Var (v "quicksort")
+           , Fn
+               ( [ v "lst5" ]
+               , Match
+                   ( Sym (v "lst5")
+                   , [ List [], List []
+                     ; ( Cons (Bind (v "pivot"), Bind (v "rest"))
+                       , Let
+                           ( [ ( Var (v "smaller")
+                               , FnAp
+                                   [ Sym (v "filter")
+                                   ; Fn
+                                       ( [ v "x7" ]
+                                       , FnAp [ Sym (v "<"); Sym (v "x7"); Sym (v "pivot") ]
+                                       )
+                                   ; Sym (v "rest")
+                                   ] )
+                             ; ( Var (v "greater")
+                               , FnAp
+                                   [ Sym (v "filter")
+                                   ; Fn
+                                       ( [ v "x8" ]
+                                       , FnAp [ Sym (v ">="); Sym (v "x8"); Sym (v "pivot") ]
+                                       )
+                                   ; Sym (v "rest")
+                                   ] )
+                             ]
                            , FnAp
-                               [ Sym (v "filter")
-                               ; Fn
-                                   ( [ v "x7" ]
-                                   , FnAp [ Sym (v "<"); Sym (v "x7"); Sym (v "pivot") ]
-                                   )
-                               ; Sym (v "rest")
-                               ] )
-                         ; ( Val (v "greater")
-                           , FnAp
-                               [ Sym (v "filter")
-                               ; Fn
-                                   ( [ v "x8" ]
-                                   , FnAp [ Sym (v ">="); Sym (v "x8"); Sym (v "pivot") ]
-                                   )
-                               ; Sym (v "rest")
-                               ] )
-                         ]
-                       , FnAp
-                           [ Sym (v "append")
-                           ; FnAp
                                [ Sym (v "append")
-                               ; FnAp [ Sym (v "quicksort"); Sym (v "smaller") ]
-                               ; List [ Sym (v "pivot") ]
-                               ]
-                           ; FnAp [ Sym (v "quicksort"); Sym (v "greater") ]
-                           ] ) )
-                 ] ) ))
+                               ; FnAp
+                                   [ Sym (v "append")
+                                   ; FnAp [ Sym (v "quicksort"); Sym (v "smaller") ]
+                                   ; List [ Sym (v "pivot") ]
+                                   ]
+                               ; FnAp [ Sym (v "quicksort"); Sym (v "greater") ]
+                               ] ) )
+                     ] ) ) ))
     ; Decl
         (Def
-           ( Val (v "unsorted")
+           ( Var (v "unsorted")
            , List [ Int 3; Int 1; Int 4; Int 1; Int 5; Int 9; Int 2; Int 6 ] ))
-    ; Decl (Def (Val (v "sorted"), FnAp [ Sym (v "quicksort"); Sym (v "unsorted") ]))
+    ; Decl (Def (Var (v "sorted"), FnAp [ Sym (v "quicksort"); Sym (v "unsorted") ]))
     ]
   in
   let structures = List.concat_map to_structure program in

@@ -74,12 +74,14 @@ and judge_let_type (env : lisp_type_env) (bindings : bindings) (body : lisp_expr
     | (pat, expr) :: rest ->
       let* expr_type = judge_type env expr in
       (match pat with
-       | Val name ->
-         let new_env = extend_type_env env name expr_type in
-         process_bindings new_env rest
-       | Fn (_name, _args) ->
-         (* 関数定義の場合、引数の型が不明なため一旦スキップ *)
-         process_bindings env rest)
+       | Lisp_ast.Var name ->
+         (match expr with
+          | Fn (_args, _body) ->
+            (* 関数定義の場合、引数の型が不明なため一旦スキップ *)
+            process_bindings env rest
+          | _ ->
+             let new_env = extend_type_env env name expr_type in
+             process_bindings new_env rest))
   in
   process_bindings env bindings
 
