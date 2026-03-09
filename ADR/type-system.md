@@ -122,25 +122,27 @@ defは、**評価の形の宣言&定義**。型宣言とは別の機構。
 (def (f x y) (+ x y))
 ```
 
+前置 `:` は教育的じゃないし見にくいので、いきなり中置でいい気がする。
+
 ## まとめ
 
 - letやfnは、**型宣言&束縛**を行う。
 
 ```clojure
-(let ((: x Int) 10
-      (: f (-> Int (-> Int Int))) (fn (x y) (+ x y)))
+(let ((x : Int) 10
+      (f : (-> Int (-> Int Int))) (fn (x y) (+ x y)))
   (f x 10))
 ```
 
 ```clojure
-(fn ((: x Int) (: y Int)) (+ x y))
+(fn ((x : Int) (y : Int)) (+ x y))
 ```
 
 - defは、**評価の形の宣言&定義**を行う。型宣言は別とする。
 ```clojure
-(: x Int)
+(x : Int)
 (def x 10)
 
-(: f (-> Int (-> Int Int)))
+(f : (-> Int (-> Int Int)))
 (def (f x y) (+ x y))
 ```
