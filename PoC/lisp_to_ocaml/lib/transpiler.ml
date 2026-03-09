@@ -153,7 +153,7 @@ and to_list_exp (elements : lisp_expr list) : expression =
     let tl_exp = to_list_exp tl in
     Exp.construct
       { txt = Lident "::"; loc = Location.none }
-      (Some (Exp.tuple [ hd_exp; tl_exp ]))
+      (Some (Exp.tuple [ (None, hd_exp); (None, tl_exp) ]))
 
 
 (** matching_pattをOCamlのパターンに変換する *)
@@ -178,7 +178,7 @@ and to_ocaml_pat (p : matching_patt) : pattern =
     let tl_pat = to_ocaml_pat tl in
     Pat.construct
       { txt = Lident "::"; loc = Location.none }
-      (Some ([], Pat.tuple [ hd_pat; tl_pat ]))
+      (Some ([], Pat.tuple [ (None, hd_pat); (None, tl_pat) ] Closed))
   | Wildcard -> to_wildcard_pat ()
 
 
@@ -191,7 +191,7 @@ and to_list_pat (patterns : matching_patt list) : pattern =
     let tl_pat = to_list_pat tl in
     Pat.construct
       { txt = Lident "::"; loc = Location.none }
-      (Some ([], Pat.tuple [ hd_pat; tl_pat ]))
+      (Some ([], Pat.tuple [ (None, hd_pat); (None, tl_pat) ] Closed))
 
 
 (** match_caseをOCamlのcaseに変換する *)
