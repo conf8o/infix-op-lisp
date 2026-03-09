@@ -9,10 +9,17 @@
 ; 関数定義
 (def (fname arg1 arg2 ...)
   expr)
+; これは下記の糖衣構文
+(def fname
+  (fn (arg1 arg2 ...)
+    expr))
 
 ; 束縛
 (let (name1 expr1
       name2 expr2
+      (fname1 arg1 arg2) fexpr
+      ; これは下記関数束縛の糖衣構文
+      fname2 (fn (arg1 arg2) fexpr)
       ...)
   body)
 
