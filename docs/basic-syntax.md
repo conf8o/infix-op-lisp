@@ -17,9 +17,9 @@
 ; 束縛
 (let (name1 expr1
       name2 expr2
-      (fname1 arg1 arg2) fexpr
+      (fname1 arg1 arg2) fexpr1
       ; これは下記関数束縛の糖衣構文
-      fname2 (fn (arg1 arg2) fexpr)
+      fname2 (fn (arg1 arg2) fexpr2)
       ...)
   body)
 
