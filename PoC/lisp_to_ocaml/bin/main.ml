@@ -79,7 +79,8 @@ let () =
                                    [ Sym (v "filter")
                                    ; Fn
                                        ( [ v "x7" ]
-                                       , FnAp [ Sym (v "<"); Sym (v "x7"); Sym (v "pivot") ]
+                                       , FnAp
+                                           [ Sym (v "<"); Sym (v "x7"); Sym (v "pivot") ]
                                        )
                                    ; Sym (v "rest")
                                    ] )
@@ -88,7 +89,8 @@ let () =
                                    [ Sym (v "filter")
                                    ; Fn
                                        ( [ v "x8" ]
-                                       , FnAp [ Sym (v ">="); Sym (v "x8"); Sym (v "pivot") ]
+                                       , FnAp
+                                           [ Sym (v ">="); Sym (v "x8"); Sym (v "pivot") ]
                                        )
                                    ; Sym (v "rest")
                                    ] )

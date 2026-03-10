@@ -2,7 +2,6 @@ open Lisp_ast
 open Lisp_type
 open Type_system
 
-
 (** result型のbind操作 *)
 let ( let* ) = Result.bind
 
@@ -80,8 +79,8 @@ and judge_let_type (env : lisp_type_env) (bindings : bindings) (body : lisp_expr
             (* 関数定義の場合、引数の型が不明なため一旦スキップ *)
             process_bindings env rest
           | _ ->
-             let new_env = extend_type_env env name expr_type in
-             process_bindings new_env rest))
+            let new_env = extend_type_env env name expr_type in
+            process_bindings new_env rest))
   in
   process_bindings env bindings
 

@@ -125,7 +125,8 @@ let test_let () =
     [ (* 単一let *)
       Decl
         (Def
-           (Var calc1, Fn ([], Let ([ Var x1, Int 10 ], FnAp [ Sym (v0 "+"); Sym x1; Int 5 ]))))
+           ( Var calc1
+           , Fn ([], Let ([ Var x1, Int 10 ], FnAp [ Sym (v0 "+"); Sym x1; Int 5 ])) ))
     ; (* ネストlet *)
       Decl
         (Def
@@ -143,7 +144,8 @@ let test_let () =
                ( []
                , Let
                    ( [ Var x3, Int 10; Var y3, Int 20; Var z3, Int 30 ]
-                   , FnAp [ Sym (v0 "+"); Sym x3; FnAp [ Sym (v0 "+"); Sym y3; Sym z3 ] ] ) ) ))
+                   , FnAp [ Sym (v0 "+"); Sym x3; FnAp [ Sym (v0 "+"); Sym y3; Sym z3 ] ]
+                   ) ) ))
     ]
   in
   let expected_file = "expected/let.ml" in

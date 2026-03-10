@@ -153,7 +153,7 @@ and to_list_exp (elements : lisp_expr list) : expression =
     let tl_exp = to_list_exp tl in
     Exp.construct
       { txt = Lident "::"; loc = Location.none }
-      (Some (Exp.tuple [ (None, hd_exp); (None, tl_exp) ]))
+      (Some (Exp.tuple [ None, hd_exp; None, tl_exp ]))
 
 
 (** matching_pattをOCamlのパターンに変換する *)
@@ -178,7 +178,7 @@ and to_ocaml_pat (p : matching_patt) : pattern =
     let tl_pat = to_ocaml_pat tl in
     Pat.construct
       { txt = Lident "::"; loc = Location.none }
-      (Some ([], Pat.tuple [ (None, hd_pat); (None, tl_pat) ] Closed))
+      (Some ([], Pat.tuple [ None, hd_pat; None, tl_pat ] Closed))
   | Wildcard -> to_wildcard_pat ()
 
 
@@ -191,7 +191,7 @@ and to_list_pat (patterns : matching_patt list) : pattern =
     let tl_pat = to_list_pat tl in
     Pat.construct
       { txt = Lident "::"; loc = Location.none }
-      (Some ([], Pat.tuple [ (None, hd_pat); (None, tl_pat) ] Closed))
+      (Some ([], Pat.tuple [ None, hd_pat; None, tl_pat ] Closed))
 
 
 (** match_caseをOCamlのcaseに変換する *)
@@ -208,13 +208,11 @@ and binding_to_value_binding (b : binding) : value_binding * rec_flag =
   match pat with
   | Var name ->
     (match expr with
-    | Fn (args, expr) ->
-        let rec_flag = judge_rec name expr in
-        let fn_exp = to_ocaml_exp (Fn (args, expr)) in
-        Vb.mk (to_variable_pat name) fn_exp, rec_flag
-    | _ ->
-        Vb.mk (to_variable_pat name) (to_ocaml_exp expr), Nonrecursive)
-    
+     | Fn (args, expr) ->
+       let rec_flag = judge_rec name expr in
+       let fn_exp = to_ocaml_exp (Fn (args, expr)) in
+       Vb.mk (to_variable_pat name) fn_exp, rec_flag
+     | _ -> Vb.mk (to_variable_pat name) (to_ocaml_exp expr), Nonrecursive)
 
 
 (** LispのASTをOCamlのParsetree構造に変換する *)

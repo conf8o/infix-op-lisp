@@ -42,4 +42,3 @@ let lookup_type (env : lisp_type_env) (name : var) : (lisp_type, type_check_erro
 (** 型環境に変数の型を追加する *)
 let extend_type_env (env : lisp_type_env) (name : var) (ty : lisp_type) : lisp_type_env =
   (name, ty) :: env
-
