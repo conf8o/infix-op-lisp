@@ -1,4 +1,4 @@
-type ('a, 'b) validate =
+type ('a, 'b) validation =
   | Success of 'a
   | Failure of 'b list
 

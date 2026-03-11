@@ -1,7 +1,6 @@
 open Lisp_ast
 open Lisp_type
-open Type_system
-open Validate
+open Validation
 
 (* ================================ *)
 (* 型検査まわり *)
@@ -36,7 +35,7 @@ let init_type_env () : lisp_type_env =
 
 (** 型環境から変数の型を検索する *)
 let lookup_type (name : var) (env : lisp_type_env)
-  : (lisp_type, type_check_error) validate
+  : (lisp_type, type_check_error) validation
   =
   match List.assoc_opt name env with
   | Some ty -> succeed ty
@@ -50,7 +49,7 @@ let extend_type_env (name : var) (ty : lisp_type) (env : lisp_type_env) : lisp_t
 
 (** 式の型を判定する *)
 let rec judge_type (expr : lisp_expr) (env : lisp_type_env)
-  : (lisp_type, type_check_error) validate
+  : (lisp_type, type_check_error) validation
   =
   match expr with
   | Int _ -> succeed Int
@@ -66,12 +65,12 @@ let rec judge_type (expr : lisp_expr) (env : lisp_type_env)
 
 (** 関数の型を判定する *)
 and judge_fn_type (args : var list) (body : lisp_expr) (env : lisp_type_env)
-  : (lisp_type, type_check_error) validate
+  : (lisp_type, type_check_error) validation
   =
   match args with
   | [] ->
     (* 引数なしの関数は一旦扱わない *)
-    let open Validate.Syntax in
+    let open Validation.Syntax in
     let* body_type = judge_type body env in
     succeed body_type
   | _ ->
@@ -81,27 +80,27 @@ and judge_fn_type (args : var list) (body : lisp_expr) (env : lisp_type_env)
 
 (** 関数適用の型を判定する *)
 and judge_fnap_type (items : lisp_expr list) (env : lisp_type_env)
-  : (lisp_type, type_check_error) validate
+  : (lisp_type, type_check_error) validation
   =
   match items with
   | [] -> fail_one EmptyList
   | [ single ] -> judge_type single env
   | fn :: args ->
-    let open Validate.Syntax in
+    let open Validation.Syntax in
     let* fn_type = judge_type fn env in
     judge_apply_type fn_type args env
 
 
 (** 関数型に引数を適用した結果の型を判定する *)
 and judge_apply_type (fn_type : lisp_type) (args : lisp_expr list) (env : lisp_type_env)
-  : (lisp_type, type_check_error) validate
+  : (lisp_type, type_check_error) validation
   =
   match args with
   | [] -> succeed fn_type
   | arg :: rest ->
     (match fn_type with
      | Fn (arg_type, result_type) ->
-       let open Validate.Syntax in
+       let open Validation.Syntax in
        let* actual_arg_type = judge_type arg env in
        if actual_arg_type = arg_type then
          judge_apply_type result_type rest env
@@ -112,13 +111,13 @@ and judge_apply_type (fn_type : lisp_type) (args : lisp_expr list) (env : lisp_t
 
 (** let式の型を判定する *)
 and judge_let_type (bindings : bindings) (body : lisp_expr) (env : lisp_type_env)
-  : (lisp_type, type_check_error) validate
+  : (lisp_type, type_check_error) validation
   =
   let rec process_bindings bindings' env =
     match bindings' with
     | [] -> judge_type body env
     | (pat, expr) :: rest ->
-      let open Validate.Syntax in
+      let open Validation.Syntax in
       let* expr_type = judge_type expr env in
       (match pat with
        | Lisp_ast.Var name ->
@@ -139,9 +138,9 @@ and judge_if_type
       (then_expr : lisp_expr)
       (else_expr : lisp_expr)
       (env : lisp_type_env)
-  : (lisp_type, type_check_error) validate
+  : (lisp_type, type_check_error) validation
   =
-  let open Validate.Syntax in
+  let open Validation.Syntax in
   let* pred_type = judge_type pred env in
   if pred_type <> Bool then
     fail_one (ConditionNotBool pred_type)
@@ -156,12 +155,12 @@ and judge_if_type
 
 (** リストの型を判定する *)
 and judge_list_type (elements : lisp_expr list) (env : lisp_type_env)
-  : (lisp_type, type_check_error) validate
+  : (lisp_type, type_check_error) validation
   =
   match elements with
   | [] -> fail_one EmptyList
   | hd :: tl ->
-    let open Validate.Syntax in
+    let open Validation.Syntax in
     let* hd_type = judge_type hd env in
     let rec check_uniform ty = function
       | [] -> succeed (List ty)
@@ -180,9 +179,9 @@ and judge_match_type
       (value : lisp_expr)
       (cases : matching_case list)
       (env : lisp_type_env)
-  : (lisp_type, type_check_error) validate
+  : (lisp_type, type_check_error) validation
   =
-  let open Validate.Syntax in
+  let open Validation.Syntax in
   let* _value_type = judge_type value env in
   match cases with
   | [] -> fail_one EmptyMatch
@@ -208,38 +207,38 @@ and extend_env_with_pattern (env : lisp_type_env) (_patt : matching_patt) : lisp
   env
 
 
-(** Reader + Validate モナドとしての型検査器。型環境(lisp_type_env)文脈の関数を適用するための操作を提供する  *)
+(** Reader + Validation モナドとしての型検査器。型環境(lisp_type_env)文脈の関数を適用するための操作を提供する  *)
 module TypeChecker = struct
-  type 'a type_check_result = ('a, type_check_error) Validate.validate
+  type 'a type_check_result = ('a, type_check_error) Validation.validation
   type 'a type_checker = TypeChecker of (lisp_type_env -> 'a type_check_result)
 
-  let succeed x = TypeChecker (fun _ -> Validate.succeed x)
-  let fail errs = TypeChecker (fun _ -> Validate.fail errs)
+  let succeed x = TypeChecker (fun _ -> Validation.succeed x)
+  let fail errs = TypeChecker (fun _ -> Validation.fail errs)
 
   let from_result (v : 'a type_check_result) : 'a type_checker =
     match v with
-    | Validate.Success x -> succeed x
-    | Validate.Failure errs -> fail errs
+    | Validation.Success x -> succeed x
+    | Validation.Failure errs -> fail errs
 
 
-  let map f (TypeChecker check) = TypeChecker (fun env -> Validate.map f (check env))
+  let map f (TypeChecker check) = TypeChecker (fun env -> Validation.map f (check env))
 
   let ( <*> ) (TypeChecker check_f) (TypeChecker check_x) =
-    TypeChecker (fun env -> Validate.(check_f env <*> check_x env))
+    TypeChecker (fun env -> Validation.(check_f env <*> check_x env))
 
 
   (** fは型検査文脈の値を返す関数。例えば、環境から値を取ってくる関数など。*)
   let ( >>= ) (TypeChecker check) f =
     TypeChecker
       (fun env ->
-        let open Validate.Syntax in
+        let open Validation.Syntax in
         let* x = check env in
         let (TypeChecker check_after_f) = f x in
         check_after_f env)
 
 
   (** 現在の型環境を取ってくる *)
-  let ask = TypeChecker (fun env -> Validate.succeed env)
+  let ask = TypeChecker (fun env -> Validation.succeed env)
 
   (** 現在の環境を引数とする関数を適用して戻り値を得る関数。 *)
   let asks f = ask >>= fun env -> succeed (f env)
