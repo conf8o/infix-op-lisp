@@ -160,7 +160,6 @@ and extend_env_with_pattern (env : lisp_type_env) (_patt : matching_patt) : lisp
 (** Reader + Validate モナドとしての型検査器。型環境(lisp_type_env)文脈の関数を適用するための操作を提供する  *)
 module TypeChecker = struct
   type 'a type_check_result = ('a, type_check_error) Validate.validate
-
   type 'a type_checker = TypeChecker of (lisp_type_env -> 'a type_check_result)
 
   (** xを型環境文脈に引き入れる*)
