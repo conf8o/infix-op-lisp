@@ -1,152 +1,203 @@
 open Lisp_ast
 open Lisp_type
 open Type_system
+open Validate
 
-(** result型のbind操作 *)
-let ( let* ) = Result.bind
+(* ================================ *)
+(* 型検査まわり *)
+(* ================================ *)
+
+type type_check_error =
+  | UnboundVariable of var
+  | TypeMismatch of lisp_type * lisp_type
+  | ConditionNotBool of lisp_type
+  | BranchTypeMismatch of lisp_type * lisp_type
+  | NotAFunction of lisp_type
+  | EmptyList
+  | ListElementTypeMismatch
+  | EmptyMatch
+  | CannotInferFunctionType
+  | TooManyArguments
+
+type lisp_type_env = (var * lisp_type) list
+
+let init_type_env () : lisp_type_env =
+  [ top_var "+", Fn (Int, Fn (Int, Int))
+  ; top_var "-", Fn (Int, Fn (Int, Int))
+  ; top_var "*", Fn (Int, Fn (Int, Int))
+  ; top_var "<", Fn (Int, Fn (Int, Bool))
+  ; top_var ">", Fn (Int, Fn (Int, Bool))
+  ; top_var "=", Fn (Int, Fn (Int, Bool))
+  ; top_var "<=", Fn (Int, Fn (Int, Bool))
+  ; top_var ">=", Fn (Int, Fn (Int, Bool))
+  ; top_var "::", Fn (Var "T", Fn (List (Var "T"), List (Var "T")))
+  ]
+
+
+(** 型環境から変数の型を検索する *)
+let lookup_type (name : var) (env : lisp_type_env)
+  : (lisp_type, type_check_error) validate
+  =
+  match List.assoc_opt name env with
+  | Some ty -> succeed ty
+  | None -> fail_one (UnboundVariable name)
+
+
+(** 型環境に変数の型を追加する *)
+let extend_type_env (name : var) (ty : lisp_type) (env : lisp_type_env) : lisp_type_env =
+  (name, ty) :: env
+
 
 (** 式の型を判定する *)
-let rec judge_type (env : lisp_type_env) (expr : lisp_expr)
-  : (lisp_type, type_check_error) result
+let rec judge_type (expr : lisp_expr) (env : lisp_type_env)
+  : (lisp_type, type_check_error) validate
   =
   match expr with
-  | Int _ -> Ok Int
-  | Bool _ -> Ok Bool
-  | Sym name -> lookup_type env name
-  | Fn (args, body) -> judge_fn_type env args body
-  | FnAp items -> judge_fnap_type env items
-  | Let (bindings, body) -> judge_let_type env bindings body
-  | If (pred, then_expr, else_expr) -> judge_if_type env pred then_expr else_expr
-  | List elements -> judge_list_type env elements
-  | Match (value, cases) -> judge_match_type env value cases
+  | Int _ -> succeed Int
+  | Bool _ -> succeed Bool
+  | Sym name -> lookup_type name env
+  | Fn (args, body) -> judge_fn_type args body env
+  | FnAp items -> judge_fnap_type items env
+  | Let (bindings, body) -> judge_let_type bindings body env
+  | If (pred, then_expr, else_expr) -> judge_if_type pred then_expr else_expr env
+  | List elements -> judge_list_type elements env
+  | Match (value, cases) -> judge_match_type value cases env
 
 
 (** 関数の型を判定する *)
-and judge_fn_type (env : lisp_type_env) (args : var list) (body : lisp_expr)
-  : (lisp_type, type_check_error) result
+and judge_fn_type (args : var list) (body : lisp_expr) (env : lisp_type_env)
+  : (lisp_type, type_check_error) validate
   =
   match args with
   | [] ->
     (* 引数なしの関数は一旦扱わない *)
-    let* body_type = judge_type env body in
-    Ok body_type
+    let open Validate.Syntax in
+    let* body_type = judge_type body env in
+    succeed body_type
   | _ ->
     (* 引数の型を推定できないため、エラーを返す *)
-    Error CannotInferFunctionType
+    fail_one CannotInferFunctionType
 
 
 (** 関数適用の型を判定する *)
-and judge_fnap_type (env : lisp_type_env) (items : lisp_expr list)
-  : (lisp_type, type_check_error) result
+and judge_fnap_type (items : lisp_expr list) (env : lisp_type_env)
+  : (lisp_type, type_check_error) validate
   =
   match items with
-  | [] -> Error EmptyList
-  | [ single ] -> judge_type env single
+  | [] -> fail_one EmptyList
+  | [ single ] -> judge_type single env
   | fn :: args ->
-    let* fn_type = judge_type env fn in
-    judge_apply_type env fn_type args
+    let open Validate.Syntax in
+    let* fn_type = judge_type fn env in
+    judge_apply_type fn_type args env
 
 
 (** 関数型に引数を適用した結果の型を判定する *)
-and judge_apply_type (env : lisp_type_env) (fn_type : lisp_type) (args : lisp_expr list)
-  : (lisp_type, type_check_error) result
+and judge_apply_type (fn_type : lisp_type) (args : lisp_expr list) (env : lisp_type_env)
+  : (lisp_type, type_check_error) validate
   =
   match args with
-  | [] -> Ok fn_type
+  | [] -> succeed fn_type
   | arg :: rest ->
     (match fn_type with
      | Fn (arg_type, result_type) ->
-       let* actual_arg_type = judge_type env arg in
+       let open Validate.Syntax in
+       let* actual_arg_type = judge_type arg env in
        if actual_arg_type = arg_type then
-         judge_apply_type env result_type rest
+         judge_apply_type result_type rest env
        else
-         Error (TypeMismatch (arg_type, actual_arg_type))
-     | _ -> Error (NotAFunction fn_type))
+         fail_one (TypeMismatch (arg_type, actual_arg_type))
+     | _ -> fail_one (NotAFunction fn_type))
 
 
 (** let式の型を判定する *)
-and judge_let_type (env : lisp_type_env) (bindings : bindings) (body : lisp_expr)
-  : (lisp_type, type_check_error) result
+and judge_let_type (bindings : bindings) (body : lisp_expr) (env : lisp_type_env)
+  : (lisp_type, type_check_error) validate
   =
-  let rec process_bindings env = function
-    | [] -> judge_type env body
+  let rec process_bindings bindings' env =
+    match bindings' with
+    | [] -> judge_type body env
     | (pat, expr) :: rest ->
-      let* expr_type = judge_type env expr in
+      let open Validate.Syntax in
+      let* expr_type = judge_type expr env in
       (match pat with
        | Lisp_ast.Var name ->
          (match expr with
           | Fn (_args, _body) ->
             (* 関数定義の場合、引数の型が不明なため一旦スキップ *)
-            process_bindings env rest
+            process_bindings rest env
           | _ ->
-            let new_env = extend_type_env env name expr_type in
-            process_bindings new_env rest))
+            let new_env = extend_type_env name expr_type env in
+            process_bindings rest new_env))
   in
-  process_bindings env bindings
+  process_bindings bindings env
 
 
 (** if式の型を判定する *)
 and judge_if_type
-      (env : lisp_type_env)
       (pred : lisp_expr)
       (then_expr : lisp_expr)
       (else_expr : lisp_expr)
-  : (lisp_type, type_check_error) result
+      (env : lisp_type_env)
+  : (lisp_type, type_check_error) validate
   =
-  let* pred_type = judge_type env pred in
+  let open Validate.Syntax in
+  let* pred_type = judge_type pred env in
   if pred_type <> Bool then
-    Error (ConditionNotBool pred_type)
+    fail_one (ConditionNotBool pred_type)
   else
-    let* then_type = judge_type env then_expr in
-    let* else_type = judge_type env else_expr in
+    let* then_type = judge_type then_expr env in
+    let* else_type = judge_type else_expr env in
     if then_type = else_type then
-      Ok then_type
+      succeed then_type
     else
-      Error (BranchTypeMismatch (then_type, else_type))
+      fail_one (BranchTypeMismatch (then_type, else_type))
 
 
 (** リストの型を判定する *)
-and judge_list_type (env : lisp_type_env) (elements : lisp_expr list)
-  : (lisp_type, type_check_error) result
+and judge_list_type (elements : lisp_expr list) (env : lisp_type_env)
+  : (lisp_type, type_check_error) validate
   =
   match elements with
-  | [] -> Error EmptyList
+  | [] -> fail_one EmptyList
   | hd :: tl ->
-    let* hd_type = judge_type env hd in
+    let open Validate.Syntax in
+    let* hd_type = judge_type hd env in
     let rec check_uniform ty = function
-      | [] -> Ok (List ty)
+      | [] -> succeed (List ty)
       | elem :: rest ->
-        let* elem_type = judge_type env elem in
+        let* elem_type = judge_type elem env in
         if elem_type = ty then
           check_uniform ty rest
         else
-          Error ListElementTypeMismatch
+          fail_one ListElementTypeMismatch
     in
     check_uniform hd_type tl
 
 
 (** match式の型を判定する *)
 and judge_match_type
-      (env : lisp_type_env)
       (value : lisp_expr)
       (cases : matching_case list)
-  : (lisp_type, type_check_error) result
+      (env : lisp_type_env)
+  : (lisp_type, type_check_error) validate
   =
-  let* _value_type = judge_type env value in
+  let open Validate.Syntax in
+  let* _value_type = judge_type value env in
   match cases with
-  | [] -> Error EmptyMatch
+  | [] -> fail_one EmptyMatch
   | (patt, expr) :: rest ->
     let patt_env = extend_env_with_pattern env patt in
-    let* first_type = judge_type patt_env expr in
+    let* first_type = judge_type expr patt_env in
     let rec check_uniform ty = function
-      | [] -> Ok ty
+      | [] -> succeed ty
       | (patt, expr) :: rest ->
         let patt_env = extend_env_with_pattern env patt in
-        let* case_type = judge_type patt_env expr in
+        let* case_type = judge_type expr patt_env in
         if case_type = ty then
           check_uniform ty rest
         else
-          Error (BranchTypeMismatch (ty, case_type))
+          fail_one (BranchTypeMismatch (ty, case_type))
     in
     check_uniform first_type rest
 
@@ -162,9 +213,7 @@ module TypeChecker = struct
   type 'a type_check_result = ('a, type_check_error) Validate.validate
   type 'a type_checker = TypeChecker of (lisp_type_env -> 'a type_check_result)
 
-  (** xを型環境文脈に引き入れる*)
   let succeed x = TypeChecker (fun _ -> Validate.succeed x)
-
   let fail errs = TypeChecker (fun _ -> Validate.fail errs)
 
   let from_result (v : 'a type_check_result) : 'a type_checker =
@@ -197,10 +246,6 @@ module TypeChecker = struct
 
   (** ローカルに更新される型環境で検査を実行する *)
   let local update (TypeChecker check) = TypeChecker (fun env -> check (update env))
-
-  let extend_env_in_local new_bindings env =
-    List.fold_left (fun acc (name, ty) -> extend_type_env acc name ty) env new_bindings
-
 
   let lift2 f c1 c2 = map f c1 <*> c2
   let product c1 c2 = lift2 (fun x y -> x, y) c1 c2

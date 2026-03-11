@@ -4,6 +4,7 @@ type ('a, 'b) validate =
 
 let succeed x = Success x
 let fail errs = Failure errs
+let fail_one errs = Failure [ errs ]
 
 let map f = function
   | Success x -> Success (f x)
