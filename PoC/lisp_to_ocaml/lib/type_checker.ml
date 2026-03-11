@@ -155,3 +155,60 @@ and judge_match_type
 and extend_env_with_pattern (env : lisp_type_env) (_patt : matching_patt) : lisp_type_env =
   (* 一旦、パターンの型推論は行わず、環境をそのまま返す *)
   env
+
+
+(** Reader + Validate モナドとしての型検査器。型環境(lisp_type_env)文脈の関数を適用するための操作を提供する  *)
+module TypeChecker = struct
+  type 'a type_check_result = ('a, type_check_error) Validate.validate
+
+  type 'a type_checker = TypeChecker of (lisp_type_env -> 'a type_check_result)
+
+  (** xを型環境文脈に引き入れる*)
+  let succeed x = TypeChecker (fun _ -> Validate.succeed x)
+
+  let fail errs = TypeChecker (fun _ -> Validate.fail errs)
+
+  let from_result (v : 'a type_check_result) : 'a type_checker =
+    match v with
+    | Validate.Success x -> succeed x
+    | Validate.Failure errs -> fail errs
+
+
+  let map f (TypeChecker check) = TypeChecker (fun env -> Validate.map f (check env))
+
+  let ( <*> ) (TypeChecker check_f) (TypeChecker check_x) =
+    TypeChecker (fun env -> Validate.(check_f env <*> check_x env))
+
+
+  (** fは型検査文脈の値を返す関数。例えば、環境から値を取ってくる関数など。*)
+  let ( >>= ) (TypeChecker check) f =
+    TypeChecker
+      (fun env ->
+        let open Validate.Syntax in
+        let* x = check env in
+        let (TypeChecker check_after_f) = f x in
+        check_after_f env)
+
+
+  (** 現在の型環境を取ってくる *)
+  let ask = TypeChecker (fun env -> Validate.succeed env)
+
+  (** 現在の環境を引数とする関数を適用して戻り値を得る関数。 *)
+  let asks f = ask >>= fun env -> succeed (f env)
+
+  (** ローカルに更新される型環境で検査を実行する *)
+  let local update (TypeChecker check) = TypeChecker (fun env -> check (update env))
+
+  let extend_env_in_local new_bindings env =
+    List.fold_left (fun acc (name, ty) -> extend_type_env acc name ty) env new_bindings
+
+
+  let lift2 f c1 c2 = map f c1 <*> c2
+  let product c1 c2 = lift2 (fun x y -> x, y) c1 c2
+
+  module Syntax = struct
+    let ( let* ) = ( >>= )
+    let ( let+ ) x f = map f x
+    let ( and+ ) = product
+  end
+end

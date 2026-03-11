@@ -1,22 +1,32 @@
-type ('a, 'b) validate = ('a, 'b list) result
+type ('a, 'b) validate =
+  | Success of 'a
+  | Failure of 'b list
 
-let succeed x = Ok x
-let fail errs = Error errs
-let map f v = Result.map f v
-let map_error f v = Result.map_error f v
+let succeed x = Success x
+let fail errs = Failure errs
+
+let map f = function
+  | Success x -> Success (f x)
+  | Failure errs -> Failure errs
+
+
+let map_failure f = function
+  | Success x -> Success x
+  | Failure errs -> Failure (List.map f errs)
+
 
 let ( <*> ) f x =
   match f, x with
-  | Ok f', Ok x' -> Ok (f' x')
-  | Error errs_f, Ok _ -> Error errs_f
-  | Ok _, Error errs_x -> Error errs_x
-  | Error errs_f, Error errs_x -> Error (errs_f @ errs_x)
+  | Success f', Success x' -> Success (f' x')
+  | Failure errs_f, Success _ -> Failure errs_f
+  | Success _, Failure errs_x -> Failure errs_x
+  | Failure errs_f, Failure errs_x -> Failure (errs_f @ errs_x)
 
 
 let ( >>= ) x f =
   match x with
-  | Ok v -> f v
-  | Error errs -> Error errs
+  | Success v -> f v
+  | Failure errs -> Failure errs
 
 
 let lift2 f d1 d2 = map f d1 <*> d2
