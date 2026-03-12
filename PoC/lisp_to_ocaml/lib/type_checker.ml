@@ -248,10 +248,57 @@ module TypeChecker = struct
 
   let lift2 f c1 c2 = map f c1 <*> c2
   let product c1 c2 = lift2 (fun x y -> x, y) c1 c2
-
+  
   module Syntax = struct
     let ( let* ) = ( >>= )
     let ( let+ ) x f = map f x
     let ( and+ ) = product
   end
+
+  let sequence (checkers : ('a type_checker) list) : ('a list) type_checker =
+    let open Syntax in
+    List.fold_right
+      (fun checker acc_checker ->
+        product checker acc_checker
+        |> map (fun (x, xs) -> x :: xs))
+      checkers
+      (succeed [])
 end
+
+open TypeChecker
+open TypeChecker.Syntax
+
+let lookup (name : var) (env : lisp_type_env): lisp_type option = List.assoc_opt name env
+let extend (name : var) (ty : lisp_type) (env : lisp_type_env) : lisp_type_env = (name, ty) :: env
+
+let check_name_typing (name : var) : lisp_type TypeChecker.type_checker =
+  let* env = ask in
+  match lookup name env with
+  | Some ty -> succeed ty
+  | None -> fail [UnboundVariable name]
+
+let check_type (expr : lisp) : lisp_type TypeChecker.type_checker =
+  match expr with
+  | Expr Int _ -> succeed Int
+  | Expr Bool _ -> succeed Bool
+  | Expr Sym name -> check_name_typing name
+  | Expr Fn (args, body) -> check_fn_type args body
+  | Expr FnAp items -> judge_fnap_type items env
+  | Expr Let (bindings, body) -> judge_let_type bindings body env
+  | Expr If (pred, then_expr, else_expr) -> judge_if_type pred then_expr else_expr env
+  | Expr List elements -> judge_list_type elements env
+  | Expr Match (value, cases) -> judge_match_type value cases env
+  | _ -> fail [CannotInferFunctionType] (* 一旦、Expr以外のケースは扱わない *)
+
+(* 一旦、前に関数の型が型環境にある前提で組んでみる *)
+and check_fn_type (args : (var * lisp_type) list) (body : lisp_expr) : lisp_type TypeChecker.type_checker =
+  let local_checker =
+    List.fold_left
+      (fun acc_checker (name, ty) ->
+        local (extend name ty) acc_checker)
+      ask
+      args
+  in
+  let* args_types = List.map check_name_typing args |> sequence in
+  let* body_type = check_type body in
+    succeed body_type
