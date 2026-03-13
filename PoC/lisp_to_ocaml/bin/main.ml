@@ -1,3 +1,4 @@
+open Lisp_to_ocaml
 open Lisp_to_ocaml.Lisp_ast
 open Lisp_to_ocaml.Transpiler
 
@@ -35,7 +36,9 @@ let () =
         (Def
            ( Var (v "filter")
            , Fn
-               ( [ v "pred"; v "lst1" ]
+               ( [ (v "pred", Lisp_type.(Fn (Int, Bool)))
+                 ; (v "lst1", Lisp_type.(List Int))
+                 ]
                , Match
                    ( Sym (v "lst1")
                    , [ List [], List []
@@ -53,7 +56,7 @@ let () =
         (Def
            ( Var (v "append")
            , Fn
-               ( [ v "lst1_3"; v "lst2_3" ]
+               ( [ (v "lst1_3", Lisp_type.(List Int)); (v "lst2_3", Lisp_type.(List Int)) ]
                , Match
                    ( Sym (v "lst1_3")
                    , [ List [], Sym (v "lst2_3")
@@ -68,7 +71,7 @@ let () =
         (Def
            ( Var (v "quicksort")
            , Fn
-               ( [ v "lst5" ]
+               ( [ (v "lst5", Lisp_type.(List Int)) ]
                , Match
                    ( Sym (v "lst5")
                    , [ List [], List []
@@ -78,7 +81,7 @@ let () =
                                , FnAp
                                    [ Sym (v "filter")
                                    ; Fn
-                                       ( [ v "x7" ]
+                                       ( [ v "x7", Lisp_type.Int ]
                                        , FnAp
                                            [ Sym (v "<"); Sym (v "x7"); Sym (v "pivot") ]
                                        )
@@ -88,7 +91,7 @@ let () =
                                , FnAp
                                    [ Sym (v "filter")
                                    ; Fn
-                                       ( [ v "x8" ]
+                                       ( [ v "x8", Lisp_type.Int ]
                                        , FnAp
                                            [ Sym (v ">="); Sym (v "x8"); Sym (v "pivot") ]
                                        )

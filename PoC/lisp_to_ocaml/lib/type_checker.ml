@@ -17,6 +17,7 @@ type type_check_error =
   | EmptyMatch
   | CannotInferFunctionType
   | TooManyArguments
+  | NotImplemented of string
 
 type lisp_type_env = (var * lisp_type) list
 
@@ -55,7 +56,7 @@ let rec judge_type (expr : lisp_expr) (env : lisp_type_env)
   | Int _ -> succeed Int
   | Bool _ -> succeed Bool
   | Sym name -> lookup_type name env
-  | Fn (args, body) -> judge_fn_type args body env
+  | Fn (args, body) -> judge_fn_type (List.map fst args) body env
   | FnAp items -> judge_fnap_type items env
   | Let (bindings, body) -> judge_let_type bindings body env
   | If (pred, then_expr, else_expr) -> judge_if_type pred then_expr else_expr env
@@ -127,7 +128,8 @@ and judge_let_type (bindings : bindings) (body : lisp_expr) (env : lisp_type_env
             process_bindings rest env
           | _ ->
             let new_env = extend_type_env name expr_type env in
-            process_bindings rest new_env))
+            process_bindings rest new_env)
+       | Lisp_ast.TypedVar _ -> fail_one @@ NotImplemented "`let` with typed var")
   in
   process_bindings bindings env
 
@@ -254,4 +256,40 @@ module TypeChecker = struct
     let ( let+ ) x f = map f x
     let ( and+ ) = product
   end
+
+  let sequence (checkers : 'a type_checker list) : 'a list type_checker =
+    List.fold_right
+      (fun checker acc_checker ->
+         product checker acc_checker |> map (fun (x, xs) -> x :: xs))
+      checkers
+      (succeed [])
 end
+
+open TypeChecker
+open TypeChecker.Syntax
+
+let lookup (name : var) (env : lisp_type_env) : lisp_type option = List.assoc_opt name env
+
+let extend (name : var) (ty : lisp_type) (env : lisp_type_env) : lisp_type_env =
+  (name, ty) :: env
+
+
+let check_name_typing (name : var) : lisp_type TypeChecker.type_checker =
+  let* env = ask in
+  match lookup name env with
+  | Some ty -> succeed ty
+  | None -> fail [ UnboundVariable name ]
+
+
+let rec check_type (expr : lisp) : lisp_type TypeChecker.type_checker =
+  match expr with
+  | Expr (Int _) -> succeed Int
+  | Expr (Bool _) -> succeed Bool
+  | Expr (Sym name) -> check_name_typing name
+  | Expr (Fn (args, body)) -> check_fn_type args body
+  | _ -> fail [ NotImplemented "" ]
+
+
+and check_fn_type (args : typed_var list) (body : lisp_expr) : lisp_type type_checker =
+  let append_arg_types env = args @ env in
+  local append_arg_types (check_type (Expr body))

@@ -1,3 +1,4 @@
+open Lisp_type
 (* Lisp:
    - Expr: Expression. Lispの式を表す型。読む際の勘違い等を避けるため、exprとしている。
    - Patt: Pattern. Lispのパターンを表す型。読む際の勘違い等を避けるため、pattとしている。
@@ -12,7 +13,11 @@ let top_level_scope_id = ""
 let make_var s i = s, i
 let top_var s = make_var s top_level_scope_id
 
-type binding_patt = Var of var
+type typed_var = var * lisp_type
+
+type binding_patt =
+  | Var of var
+  | TypedVar of typed_var
 
 type matching_patt =
   | Bind of var
@@ -26,7 +31,7 @@ type lisp_expr =
   | Int of int
   | Bool of bool
   | Sym of var
-  | Fn of var list * lisp_expr
+  | Fn of typed_var list * lisp_expr
   | FnAp of lisp_expr list
   | Let of bindings * lisp_expr
   | If of lisp_expr * lisp_expr * lisp_expr

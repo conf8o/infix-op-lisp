@@ -1,1 +1,1 @@
-let abs__1 x__2 = if x__2 < 0 then 0 - x__2 else x__2
+let abs__1 (x__2 : int) = if x__2 < 0 then 0 - x__2 else x__2
