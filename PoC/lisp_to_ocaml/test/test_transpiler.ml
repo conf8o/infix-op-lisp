@@ -1,3 +1,4 @@
+open Lisp_to_ocaml
 open Lisp_to_ocaml.Lisp_ast
 open Lisp_to_ocaml.Transpiler
 open Parsetree
@@ -78,7 +79,13 @@ let test_function () =
   let x = v "x" in
   let y = v "y" in
   let program =
-    [ Decl (Def (Var add, Fn ([ x; y ], FnAp [ Sym (v0 "+"); Sym x; Sym y ]))) ]
+    [ Decl
+        (Def
+           ( Var add
+           , Fn
+               ( [ x, Lisp_type.Int; y, Lisp_type.Int ]
+               , FnAp [ Sym (v0 "+"); Sym x; Sym y ] ) ))
+    ]
   in
   let expected_file = "expected/function.ml" in
   test_transpile_from_file "function definition" program expected_file ()
@@ -94,7 +101,7 @@ let test_recursive_function () =
         (Def
            ( Var fact
            , Fn
-               ( [ n ]
+               ( [ n, Lisp_type.Int ]
                , If
                    ( FnAp [ Sym (v0 "="); Sym n; Int 0 ]
                    , Int 1
@@ -162,7 +169,7 @@ let test_if () =
         (Def
            ( Var abs
            , Fn
-               ( [ x ]
+               ( [ x, Lisp_type.Int ]
                , If
                    ( FnAp [ Sym (v0 "<"); Sym x; Int 0 ]
                    , FnAp [ Sym (v0 "-"); Int 0; Sym x ]
@@ -185,7 +192,7 @@ let test_match () =
         (Def
            ( Var list_sum
            , Fn
-               ( [ lst ]
+               ( [ lst, Lisp_type.Int ]
                , Match
                    ( Sym lst
                    , [ List [], Int 0

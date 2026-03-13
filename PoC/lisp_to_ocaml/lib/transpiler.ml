@@ -3,6 +3,7 @@ open Parsetree
 open Longident
 open Ast_helper
 open Lisp_ast
+open Lisp_type
 
 (* 命名に関する注記 OCaml:
    - Exp: Expression. OCamlの式を表す型
@@ -77,9 +78,34 @@ let to_empty_list_pat () : pattern =
 let to_wildcard_pat () : pattern = Pat.any ()
 
 (* ================================ *)
+(* 型に関する補助関数 *)
+(* ================================ *)
+
+(** Lispのlisp_typeをOCamlのcore_typeに変換する *)
+let rec lisp_type_to_core_type (t : lisp_type) : core_type =
+  match t with
+  | Int -> Typ.constr { txt = Lident "int"; loc = Location.none } []
+  | Bool -> Typ.constr { txt = Lident "bool"; loc = Location.none } []
+  | Unit -> Typ.constr { txt = Lident "unit"; loc = Location.none } []
+  | List elem_type ->
+    let elem_core_type = lisp_type_to_core_type elem_type in
+    Typ.constr { txt = Lident "list"; loc = Location.none } [ elem_core_type ]
+  | Fn (arg_type, ret_type) ->
+    Typ.arrow Nolabel (lisp_type_to_core_type arg_type) (lisp_type_to_core_type ret_type)
+  | Var type_var -> Typ.var type_var
+
+
+(** 型注釈付きの変数パターンを作成する: (x : int) *)
+let to_typed_variable_pat (v : var) (t : lisp_type) : pattern =
+  let var_pat = to_variable_pat v in
+  let core_t = lisp_type_to_core_type t in
+  Pat.constraint_ var_pat core_t
+
+
+(* ================================ *)
 (* OCaml parsetree への変換まわり *)
 (* ================================ *)
-let fn_args_to_params (args : var list) : function_param list =
+let fn_args_to_params (args : (var * lisp_type) list) : function_param list =
   match args with
   | [] ->
     (* 引数なし: fun () -> body のためのunitパラメータを作成 *)
@@ -91,9 +117,9 @@ let fn_args_to_params (args : var list) : function_param list =
     ]
   | _ ->
     List.map
-      (fun arg ->
+      (fun (arg, arg_type) ->
          { pparam_loc = Location.none
-         ; pparam_desc = Pparam_val (Nolabel, None, to_variable_pat arg)
+         ; pparam_desc = Pparam_val (Nolabel, None, to_typed_variable_pat arg arg_type)
          })
       args
 
@@ -213,6 +239,7 @@ and binding_to_value_binding (b : binding) : value_binding * rec_flag =
        let fn_exp = to_ocaml_exp (Fn (args, expr)) in
        Vb.mk (to_variable_pat name) fn_exp, rec_flag
      | _ -> Vb.mk (to_variable_pat name) (to_ocaml_exp expr), Nonrecursive)
+  | TypedVar _ -> failwith "TypedVar is not implemented for value_binding"
 
 
 (** LispのASTをOCamlのParsetree構造に変換する *)
