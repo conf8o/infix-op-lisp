@@ -285,7 +285,7 @@ let rec judge_type (expr : lisp) : lisp_type type_checker =
   | Expr (Int _) -> succeed Int
   | Expr (Bool _) -> succeed Bool
   | Expr (Sym name) -> judge_name_type name
-  | Expr (Lamb (args, return_type, body)) -> judge_fn_type args (body, return_type)
+  | Expr (Lamb (args, return_type, body)) -> judge_lamb_type args (body, return_type)
   | Expr (FnAp items) -> judge_fnap_type items
   | Expr (Let (bindings, body)) -> judge_let_type bindings body
   | Expr (If (pred, then_expr, else_expr)) -> judge_if_type pred then_expr else_expr
@@ -294,7 +294,7 @@ let rec judge_type (expr : lisp) : lisp_type type_checker =
   | _ -> fail [ NotImplemented "" ]
 
 
-and judge_fn_type (args : bound_var list) ((body, ty) : lisp_expr * lisp_type)
+and judge_lamb_type (args : bound_var list) ((body, ty) : lisp_expr * lisp_type)
   : lisp_type type_checker
   =
   let append_arg_types env = args @ env in
@@ -327,9 +327,11 @@ and judge_apply_type (fn_type : lisp_type) (args : lisp_expr list)
     (match fn_type with
      | Arrow (arg_type, result_type) ->
        let* actual_arg_type = judge_type (Expr arg) in
-       if actual_arg_type = arg_type then
-         judge_apply_type result_type rest
-       else
+       if actual_arg_type = arg_type then (
+         match result_type with
+         | Arrow _ -> judge_apply_type result_type rest
+         | ty -> succeed ty
+       ) else
          fail [ TypeMismatch (arg_type, actual_arg_type) ]
      | _ -> fail [ NotAFunction fn_type ])
 
@@ -347,13 +349,8 @@ and judge_let_type (bindings : bindings) (body : lisp_expr) : lisp_type type_che
          else
            fail [ TypeMismatch (expected_type, expr_type) ]
        | Fn (name, args, return_type) ->
-         (match expr with
-          | Lamb (fn_args, fn_return_type, _body) ->
-            if args = fn_args && return_type = fn_return_type then
-              local (extend name expr_type) (process_bindings rest)
-            else
-              fail [ NotImplemented "Function binding type mismatch" ]
-          | _ -> fail [ NotImplemented "Function binding must bind a function" ]))
+         let* lamb_type = judge_lamb_type args (expr, return_type) in
+         local (extend name lamb_type) (process_bindings rest))
   in
   process_bindings bindings
 
@@ -361,16 +358,21 @@ and judge_let_type (bindings : bindings) (body : lisp_expr) : lisp_type type_che
 and judge_if_type (pred : lisp_expr) (then_expr : lisp_expr) (else_expr : lisp_expr)
   : lisp_type type_checker
   =
-  let* pred_type = judge_type (Expr pred) in
-  if pred_type <> Bool then
-    fail [ ConditionNotBool pred_type ]
+  let* _bool = jugde_if_pred_type pred
+  and+ then_type = judge_type (Expr then_expr)
+  and+ else_type = judge_type (Expr else_expr) in
+  if then_type = else_type then
+    succeed then_type
   else
-    let* then_type = judge_type (Expr then_expr) in
-    let* else_type = judge_type (Expr else_expr) in
-    if then_type = else_type then
-      succeed then_type
-    else
-      fail [ BranchTypeMismatch (then_type, else_type) ]
+    fail [ BranchTypeMismatch (then_type, else_type) ]
+
+
+and jugde_if_pred_type (pred : lisp_expr) : lisp_type type_checker =
+  let* pred_type = judge_type (Expr pred) in
+  if pred_type = Bool then
+    succeed Bool
+  else
+    fail [ ConditionNotBool pred_type ]
 
 
 and judge_list_type (elements : lisp_expr list) : lisp_type type_checker =
@@ -378,16 +380,12 @@ and judge_list_type (elements : lisp_expr list) : lisp_type type_checker =
   | [] -> fail [ EmptyList ]
   | hd :: tl ->
     let* hd_type = judge_type (Expr hd) in
-    let rec check_uniform ty = function
-      | [] -> succeed (List ty)
-      | elem :: rest ->
-        let* elem_type = judge_type (Expr elem) in
-        if elem_type = ty then
-          check_uniform ty rest
-        else
-          fail [ ListElementTypeMismatch ]
-    in
-    check_uniform hd_type tl
+    (* boolを返す型検査関数があってもいいかも *)
+    let* tl_types = sequence (List.map (fun e -> judge_type (Expr e)) tl) in
+    if List.for_all (fun ty -> ty = hd_type) tl_types then
+      succeed (List hd_type)
+    else
+      fail [ ListElementTypeMismatch ]
 
 
 and judge_match_type (value : lisp_expr) (cases : matching_case list)
