@@ -1,10 +1,4 @@
 open Lisp_type
-(* Lisp:
-   - Expr: Expression. Lispの式を表す型。読む際の勘違い等を避けるため、exprとしている。
-   - Patt: Pattern. Lispのパターンを表す型。読む際の勘違い等を避けるため、pattとしている。
-   - Decl: Declaration. Lispの宣言を表す型。Strと対応する。
-   - Fn: Function. Lispの関数を表す型。読む際の衝突を避けるため、fnとしている。funcでないのは、無名関数をfnで表すため。
-*)
 
 type scope_identifier = string
 type var = string * scope_identifier
@@ -17,7 +11,7 @@ type bound_var = var * lisp_type
 
 type binding_patt =
   | Val of bound_var
-  | Func of var * bound_var list * lisp_type
+  | Fn of var * bound_var list * lisp_type
 
 type matching_patt =
   | Bind of var
@@ -31,7 +25,7 @@ type lisp_expr =
   | Int of int
   | Bool of bool
   | Sym of var
-  | Fn of bound_var list * lisp_type * lisp_expr
+  | Lamb of bound_var list * lisp_type * lisp_expr
   | FnAp of lisp_expr list
   | Let of bindings * lisp_expr
   | If of lisp_expr * lisp_expr * lisp_expr
@@ -59,7 +53,7 @@ let rec contains_rec_call (name : var) (expr : lisp_expr) : bool =
   match expr with
   | Int _ | Bool _ -> false
   | Sym v -> v = name
-  | Fn (_, _, body) -> contains_rec_call name body
+  | Lamb (_, _, body) -> contains_rec_call name body
   | FnAp items -> List.exists (contains_rec_call name) items
   | Let (bindings, body) ->
     let rec_in_bindings =

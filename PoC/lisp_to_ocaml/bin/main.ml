@@ -34,9 +34,9 @@ let () =
   let program =
     [ Decl
         (Def
-           ( Func
+           ( Fn
                ( v "filter"
-               , [ (v "pred", Lisp_type.(Fn (Int, Bool)))
+               , [ (v "pred", Lisp_type.(Arrow (Int, Bool)))
                  ; (v "lst1", Lisp_type.(List Int))
                  ]
                , Lisp_type.(List Int) )
@@ -55,7 +55,7 @@ let () =
                  ] ) ))
     ; Decl
         (Def
-           ( Func
+           ( Fn
                ( v "append"
                , [ (v "lst1_3", Lisp_type.(List Int))
                  ; (v "lst2_3", Lisp_type.(List Int))
@@ -73,8 +73,7 @@ let () =
                  ] ) ))
     ; Decl
         (Def
-           ( Func
-               (v "quicksort", [ (v "lst5", Lisp_type.(List Int)) ], Lisp_type.(List Int))
+           ( Fn (v "quicksort", [ (v "lst5", Lisp_type.(List Int)) ], Lisp_type.(List Int))
            , Match
                ( Sym (v "lst5")
                , [ List [], List []
@@ -83,7 +82,7 @@ let () =
                        ( [ ( Val (v "smaller", Lisp_type.(List Int))
                            , FnAp
                                [ Sym (v "filter")
-                               ; Fn
+                               ; Lamb
                                    ( [ v "x7", Lisp_type.Int ]
                                    , Lisp_type.Bool
                                    , FnAp [ Sym (v "<"); Sym (v "x7"); Sym (v "pivot") ]
@@ -93,7 +92,7 @@ let () =
                          ; ( Val (v "greater", Lisp_type.(List Int))
                            , FnAp
                                [ Sym (v "filter")
-                               ; Fn
+                               ; Lamb
                                    ( [ v "x8", Lisp_type.Int ]
                                    , Lisp_type.Bool
                                    , FnAp [ Sym (v ">="); Sym (v "x8"); Sym (v "pivot") ]

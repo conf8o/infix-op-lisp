@@ -83,7 +83,7 @@ let test_function () =
   let program =
     [ Decl
         (Def
-           ( Func (add, [ x, Lisp_type.Int; y, Lisp_type.Int ], Lisp_type.Int)
+           ( Fn (add, [ x, Lisp_type.Int; y, Lisp_type.Int ], Lisp_type.Int)
            , FnAp [ Sym (v0 "+"); Sym x; Sym y ] ))
     ]
   in
@@ -99,7 +99,7 @@ let test_recursive_function () =
   let program =
     [ Decl
         (Def
-           ( Func (fact, [ n, Lisp_type.Int ], Lisp_type.Int)
+           ( Fn (fact, [ n, Lisp_type.Int ], Lisp_type.Int)
            , If
                ( FnAp [ Sym (v0 "="); Sym n; Int 0 ]
                , Int 1
@@ -130,14 +130,14 @@ let test_let () =
     [ (* 単一let *)
       Decl
         (Def
-           ( Func (calc1, [], Lisp_type.Int)
+           ( Fn (calc1, [], Lisp_type.Int)
            , Let
                ([ Val (x1, Lisp_type.Int), Int 10 ], FnAp [ Sym (v0 "+"); Sym x1; Int 5 ])
            ))
     ; (* ネストlet *)
       Decl
         (Def
-           ( Func (calc2, [], Lisp_type.Int)
+           ( Fn (calc2, [], Lisp_type.Int)
            , Let
                ( [ Val (x2, Lisp_type.Int), Int 10
                  ; Val (y2, Lisp_type.Int), FnAp [ Sym (v0 "+"); Sym x2; Int 5 ]
@@ -146,7 +146,7 @@ let test_let () =
     ; (* 複数束縛let *)
       Decl
         (Def
-           ( Func (calc3, [], Lisp_type.Int)
+           ( Fn (calc3, [], Lisp_type.Int)
            , Let
                ( [ Val (x3, Lisp_type.Int), Int 10
                  ; Val (y3, Lisp_type.Int), Int 20
@@ -167,7 +167,7 @@ let test_if () =
   let program =
     [ Decl
         (Def
-           ( Func (abs, [ x, Lisp_type.Int ], Lisp_type.Int)
+           ( Fn (abs, [ x, Lisp_type.Int ], Lisp_type.Int)
            , If
                ( FnAp [ Sym (v0 "<"); Sym x; Int 0 ]
                , FnAp [ Sym (v0 "-"); Int 0; Sym x ]
@@ -188,7 +188,7 @@ let test_match () =
   let program =
     [ Decl
         (Def
-           ( Func (list_sum, [ lst, Lisp_type.Int ], Lisp_type.Int)
+           ( Fn (list_sum, [ lst, Lisp_type.Int ], Lisp_type.Int)
            , Match
                ( Sym lst
                , [ List [], Int 0

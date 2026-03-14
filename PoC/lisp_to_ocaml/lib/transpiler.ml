@@ -9,13 +9,11 @@ open Lisp_type
    - Exp: Expression. OCamlの式を表す型
    - Pat: Pattern. OCamlのパターンを表す型
    - Str: Structure. OCamlの構造体（トップレベルの宣言）を表す型
-   - Fun: Function. OCamlの関数を表す型
 
    Lisp:
    - Expr: Expression. Lispの式を表す型。読む際の勘違い等を避けるため、exprとしている。
    - Patt: Pattern. Lispのパターンを表す型。読む際の勘違い等を避けるため、pattとしている。
    - Decl: Declaration. Lispの宣言を表す型。Strと対応する。
-   - Fn: Function. Lispの関数を表す型。読む際の衝突を避けるため、fnとしている。funcでないのは、無名関数をfnで表すため。
 *)
 
 (* ================================ *)
@@ -90,7 +88,7 @@ let rec lisp_type_to_core_type (t : lisp_type) : core_type =
   | List elem_type ->
     let elem_core_type = lisp_type_to_core_type elem_type in
     Typ.constr { txt = Lident "list"; loc = Location.none } [ elem_core_type ]
-  | Fn (arg_type, ret_type) ->
+  | Arrow (arg_type, ret_type) ->
     Typ.arrow Nolabel (lisp_type_to_core_type arg_type) (lisp_type_to_core_type ret_type)
   | Var type_var -> Typ.var type_var
   | Abbr -> Typ.any ()
@@ -139,7 +137,7 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
   | Int n -> to_constant_int_exp n
   | Bool b -> to_constant_bool_exp b
   | Sym name -> to_identifier_exp (to_unique_var name)
-  | Fn (args, ty, body) ->
+  | Lamb (args, ty, body) ->
     let params = fn_args_to_params args in
     let body_exp = to_ocaml_exp body in
     let type_constraint = Some (Pconstraint (lisp_type_to_core_type ty)) in
@@ -237,19 +235,19 @@ and binding_to_value_binding (b : binding) : value_binding * rec_flag =
   | Val (name, _val_type) ->
     (* val_typeを組み込む *)
     (match expr with
-     | Fn (args, return_type, expr) ->
+     | Lamb (args, return_type, expr) ->
        let rec_flag = judge_rec name expr in
-       let fn_exp = to_ocaml_exp (Fn (args, return_type, expr)) in
+       let fn_exp = to_ocaml_exp (Lamb (args, return_type, expr)) in
        Vb.mk (to_variable_pat name) fn_exp, rec_flag
      | _ -> Vb.mk (to_variable_pat name) (to_ocaml_exp expr), Nonrecursive)
-  | Func (name, args, return_type) ->
+  | Fn (name, args, return_type) ->
     let (fn_type : lisp_type) =
       List.fold_right
-        (fun (_, arg_type) acc_fn_type -> Fn (arg_type, acc_fn_type))
+        (fun (_, arg_type) acc_fn_type -> Arrow (arg_type, acc_fn_type))
         args
         return_type
     in
-    binding_to_value_binding (Val (name, fn_type), Fn (args, return_type, expr))
+    binding_to_value_binding (Val (name, fn_type), Lamb (args, return_type, expr))
 
 
 (** LispのASTをOCamlのParsetree構造に変換する *)
