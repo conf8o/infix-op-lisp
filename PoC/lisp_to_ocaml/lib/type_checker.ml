@@ -51,7 +51,6 @@ module TypeChecker = struct
     TypeChecker (fun env -> Validation.(check_f env <*> check_x env))
 
 
-  (** fは型検査文脈の値を返す関数。例えば、環境から値を取ってくる関数など。*)
   let ( >>= ) (TypeChecker check) f =
     TypeChecker
       (fun env ->
@@ -121,7 +120,6 @@ and judge_lamb_type (args : bound_var list) ((body, ty) : lisp_expr * lisp_type)
   : lisp_type type_checker
   =
   let append_arg_types env = args @ env in
-  let open Syntax in
   let* body_type = local append_arg_types (judge_type (Expr body)) in
   if body_type = ty then (
     let fn_type =
