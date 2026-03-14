@@ -14,8 +14,6 @@ type type_check_error =
   | EmptyList
   | ListElementTypeMismatch
   | EmptyMatch
-  | CannotInferFunctionType
-  | TooManyArguments
   | NotImplemented of string
 
 type lisp_type_env = (var * lisp_type) list
