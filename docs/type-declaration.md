@@ -45,16 +45,16 @@
 ```clojure
 (let ((x : Int) 10
       ((f x y) : Int) (+ x y)
-      (g : (Int -> Int -> Int))) (fn (x y) (* x y))
+      (g : (Int -> Int -> Int))) ((\ x y) (* x y))
   (g (f x 10) 20))
 ```
 
-- fn での変数の型注釈
+- `\`(`lambda式`)での変数の型注釈
 
 ```clojure
-(fn ((x : Int) (y : Int)) (+ x y))
-(fn ((x y) : Int) (+ x y))
+((\ (x : Int) (y : Int)) (+ x y))
+((\ x y) : Int) (+ x y)
 ; 最初の括弧がわずらわしいので改善の余地あり
-(fn (((x : Int) (y : Int)) : Int) (+ x y))
+(((\ (x : Int) (y : Int)) : Int) (+ x y))
 ```
 

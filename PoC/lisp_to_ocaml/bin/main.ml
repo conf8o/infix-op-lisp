@@ -23,8 +23,8 @@ let () =
        (match lst
          [] []
          (:: pivot rest)
-           (let (smaller (filter (fn (x) (< x pivot)) rest)
-                 greater (filter (fn (x) (>= x pivot)) rest))
+           (let (smaller (filter ((\ x) (< x pivot)) rest)
+                 greater (filter ((\ x) (>= x pivot)) rest))
              (append (append (quicksort smaller) (:: pivot []))
                      (quicksort greater)))))
      
