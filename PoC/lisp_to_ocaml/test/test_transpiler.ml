@@ -51,7 +51,7 @@ let test_transpile_from_file
 (** 整数値の定義のテスト *)
 let test_int () =
   scope_counter := 0;
-  let program = [ Decl (Def (Var (v "n"), Int 42)) ] in
+  let program = [ Decl (Def (Val (v "n", Lisp_type.Abbr), Int 42)) ] in
   let expected_file = "expected/int.ml" in
   test_transpile_from_file "int definition" program expected_file ()
 
@@ -59,7 +59,7 @@ let test_int () =
 (** 真偽値の定義のテスト *)
 let test_bool () =
   scope_counter := 0;
-  let program = [ Decl (Def (Var (v "flag"), Bool true)) ] in
+  let program = [ Decl (Def (Val (v "flag", Lisp_type.Abbr), Bool true)) ] in
   let expected_file = "expected/bool.ml" in
   test_transpile_from_file "bool definition" program expected_file ()
 
@@ -67,7 +67,9 @@ let test_bool () =
 (** リストの定義のテスト *)
 let test_list () =
   scope_counter := 0;
-  let program = [ Decl (Def (Var (v "nums"), List [ Int 1; Int 2; Int 3 ])) ] in
+  let program =
+    [ Decl (Def (Val (v "nums", Lisp_type.(List Int)), List [ Int 1; Int 2; Int 3 ])) ]
+  in
   let expected_file = "expected/list.ml" in
   test_transpile_from_file "list definition" program expected_file ()
 
@@ -81,10 +83,8 @@ let test_function () =
   let program =
     [ Decl
         (Def
-           ( Var add
-           , Fn
-               ( [ x, Lisp_type.Int; y, Lisp_type.Int ]
-               , FnAp [ Sym (v0 "+"); Sym x; Sym y ] ) ))
+           ( Func (add, [ x, Lisp_type.Int; y, Lisp_type.Int ], Lisp_type.Int)
+           , FnAp [ Sym (v0 "+"); Sym x; Sym y ] ))
     ]
   in
   let expected_file = "expected/function.ml" in
@@ -99,17 +99,15 @@ let test_recursive_function () =
   let program =
     [ Decl
         (Def
-           ( Var fact
-           , Fn
-               ( [ n, Lisp_type.Int ]
-               , If
-                   ( FnAp [ Sym (v0 "="); Sym n; Int 0 ]
-                   , Int 1
-                   , FnAp
-                       [ Sym (v0 "*")
-                       ; Sym n
-                       ; FnAp [ Sym fact; FnAp [ Sym (v0 "-"); Sym n; Int 1 ] ]
-                       ] ) ) ))
+           ( Func (fact, [ n, Lisp_type.Int ], Lisp_type.Int)
+           , If
+               ( FnAp [ Sym (v0 "="); Sym n; Int 0 ]
+               , Int 1
+               , FnAp
+                   [ Sym (v0 "*")
+                   ; Sym n
+                   ; FnAp [ Sym fact; FnAp [ Sym (v0 "-"); Sym n; Int 1 ] ]
+                   ] ) ))
     ]
   in
   let expected_file = "expected/recursive_function.ml" in
@@ -132,27 +130,29 @@ let test_let () =
     [ (* 単一let *)
       Decl
         (Def
-           ( Var calc1
-           , Fn ([], Let ([ Var x1, Int 10 ], FnAp [ Sym (v0 "+"); Sym x1; Int 5 ])) ))
+           ( Func (calc1, [], Lisp_type.Int)
+           , Let
+               ([ Val (x1, Lisp_type.Int), Int 10 ], FnAp [ Sym (v0 "+"); Sym x1; Int 5 ])
+           ))
     ; (* ネストlet *)
       Decl
         (Def
-           ( Var calc2
-           , Fn
-               ( []
-               , Let
-                   ( [ Var x2, Int 10; Var y2, FnAp [ Sym (v0 "+"); Sym x2; Int 5 ] ]
-                   , FnAp [ Sym (v0 "+"); Sym x2; Sym y2 ] ) ) ))
+           ( Func (calc2, [], Lisp_type.Int)
+           , Let
+               ( [ Val (x2, Lisp_type.Int), Int 10
+                 ; Val (y2, Lisp_type.Int), FnAp [ Sym (v0 "+"); Sym x2; Int 5 ]
+                 ]
+               , FnAp [ Sym (v0 "+"); Sym x2; Sym y2 ] ) ))
     ; (* 複数束縛let *)
       Decl
         (Def
-           ( Var calc3
-           , Fn
-               ( []
-               , Let
-                   ( [ Var x3, Int 10; Var y3, Int 20; Var z3, Int 30 ]
-                   , FnAp [ Sym (v0 "+"); Sym x3; FnAp [ Sym (v0 "+"); Sym y3; Sym z3 ] ]
-                   ) ) ))
+           ( Func (calc3, [], Lisp_type.Int)
+           , Let
+               ( [ Val (x3, Lisp_type.Int), Int 10
+                 ; Val (y3, Lisp_type.Int), Int 20
+                 ; Val (z3, Lisp_type.Int), Int 30
+                 ]
+               , FnAp [ Sym (v0 "+"); Sym x3; FnAp [ Sym (v0 "+"); Sym y3; Sym z3 ] ] ) ))
     ]
   in
   let expected_file = "expected/let.ml" in
@@ -167,13 +167,11 @@ let test_if () =
   let program =
     [ Decl
         (Def
-           ( Var abs
-           , Fn
-               ( [ x, Lisp_type.Int ]
-               , If
-                   ( FnAp [ Sym (v0 "<"); Sym x; Int 0 ]
-                   , FnAp [ Sym (v0 "-"); Int 0; Sym x ]
-                   , Sym x ) ) ))
+           ( Func (abs, [ x, Lisp_type.Int ], Lisp_type.Int)
+           , If
+               ( FnAp [ Sym (v0 "<"); Sym x; Int 0 ]
+               , FnAp [ Sym (v0 "-"); Int 0; Sym x ]
+               , Sym x ) ))
     ]
   in
   let expected_file = "expected/if.ml" in
@@ -190,15 +188,13 @@ let test_match () =
   let program =
     [ Decl
         (Def
-           ( Var list_sum
-           , Fn
-               ( [ lst, Lisp_type.Int ]
-               , Match
-                   ( Sym lst
-                   , [ List [], Int 0
-                     ; ( Cons (Bind x, Bind xs)
-                       , FnAp [ Sym (v0 "+"); Sym x; FnAp [ Sym list_sum; Sym xs ] ] )
-                     ] ) ) ))
+           ( Func (list_sum, [ lst, Lisp_type.Int ], Lisp_type.Int)
+           , Match
+               ( Sym lst
+               , [ List [], Int 0
+                 ; ( Cons (Bind x, Bind xs)
+                   , FnAp [ Sym (v0 "+"); Sym x; FnAp [ Sym list_sum; Sym xs ] ] )
+                 ] ) ))
     ]
   in
   let expected_file = "expected/match.ml" in

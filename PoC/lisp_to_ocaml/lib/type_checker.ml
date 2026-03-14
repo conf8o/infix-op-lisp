@@ -1,6 +1,5 @@
 open Lisp_ast
 open Lisp_type
-open Validation
 
 (* ================================ *)
 (* 型検査まわり *)
@@ -286,10 +285,17 @@ let rec judge_type (expr : lisp) : lisp_type TypeChecker.type_checker =
   | Expr (Int _) -> succeed Int
   | Expr (Bool _) -> succeed Bool
   | Expr (Sym name) -> judge_name_type name
-  | Expr (Fn (args, body)) -> judge_fn_type args body
+  | Expr (Fn (args, return_type, body)) -> judge_fn_type args (body, return_type)
   | _ -> fail [ NotImplemented "" ]
 
 
-and judge_fn_type (args : typed_var list) (body : lisp_expr) : lisp_type type_checker =
+and judge_fn_type (args : bound_var list) ((body, ty) : lisp_expr * lisp_type)
+  : lisp_type type_checker
+  =
   let append_arg_types env = args @ env in
-  local append_arg_types (judge_type (Expr body))
+  let open Syntax in
+  let* body_type = local append_arg_types (judge_type (Expr body)) in
+  if body_type = ty then
+    fail [ NotImplemented "TODO: Arg1 -> Arg2 -> ... -> Type に変換する" ]
+  else
+    fail [ TypeMismatch (body_type, ty) ]

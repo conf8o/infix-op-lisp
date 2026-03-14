@@ -93,6 +93,7 @@ let rec lisp_type_to_core_type (t : lisp_type) : core_type =
   | Fn (arg_type, ret_type) ->
     Typ.arrow Nolabel (lisp_type_to_core_type arg_type) (lisp_type_to_core_type ret_type)
   | Var type_var -> Typ.var type_var
+  | Abbr -> Typ.any ()
 
 
 (** 型注釈付きの変数パターンを作成する: (x : int) *)
@@ -138,10 +139,11 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
   | Int n -> to_constant_int_exp n
   | Bool b -> to_constant_bool_exp b
   | Sym name -> to_identifier_exp (to_unique_var name)
-  | Fn (args, body) ->
+  | Fn (args, ty, body) ->
     let params = fn_args_to_params args in
     let body_exp = to_ocaml_exp body in
-    Exp.function_ params None (Pfunction_body body_exp)
+    let type_constraint = Some (Pconstraint (lisp_type_to_core_type ty)) in
+    Exp.function_ params type_constraint (Pfunction_body body_exp)
   | FnAp items ->
     (match items with
      | [] -> to_unit_exp ()
@@ -232,14 +234,22 @@ and to_match_case (case : matching_case) : case =
 and binding_to_value_binding (b : binding) : value_binding * rec_flag =
   let pat, expr = b in
   match pat with
-  | Var name ->
+  | Val (name, _val_type) ->
+    (* val_typeを組み込む *)
     (match expr with
-     | Fn (args, expr) ->
+     | Fn (args, return_type, expr) ->
        let rec_flag = judge_rec name expr in
-       let fn_exp = to_ocaml_exp (Fn (args, expr)) in
+       let fn_exp = to_ocaml_exp (Fn (args, return_type, expr)) in
        Vb.mk (to_variable_pat name) fn_exp, rec_flag
      | _ -> Vb.mk (to_variable_pat name) (to_ocaml_exp expr), Nonrecursive)
-  | TypedVar _ -> failwith "TypedVar is not implemented for value_binding"
+  | Func (name, args, return_type) ->
+    let (fn_type : lisp_type) =
+      List.fold_right
+        (fun (_, arg_type) acc_fn_type -> Fn (arg_type, acc_fn_type))
+        args
+        return_type
+    in
+    binding_to_value_binding (Val (name, fn_type), Fn (args, return_type, expr))
 
 
 (** LispのASTをOCamlのParsetree構造に変換する *)

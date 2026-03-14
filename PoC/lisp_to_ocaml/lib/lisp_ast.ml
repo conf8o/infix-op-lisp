@@ -13,11 +13,11 @@ let top_level_scope_id = ""
 let make_var s i = s, i
 let top_var s = make_var s top_level_scope_id
 
-type typed_var = var * lisp_type
+type bound_var = var * lisp_type
 
 type binding_patt =
-  | Var of var
-  | TypedVar of typed_var
+  | Val of bound_var
+  | Func of var * bound_var list * lisp_type
 
 type matching_patt =
   | Bind of var
@@ -31,7 +31,7 @@ type lisp_expr =
   | Int of int
   | Bool of bool
   | Sym of var
-  | Fn of typed_var list * lisp_expr
+  | Fn of bound_var list * lisp_type * lisp_expr
   | FnAp of lisp_expr list
   | Let of bindings * lisp_expr
   | If of lisp_expr * lisp_expr * lisp_expr
@@ -59,7 +59,7 @@ let rec contains_rec_call (name : var) (expr : lisp_expr) : bool =
   match expr with
   | Int _ | Bool _ -> false
   | Sym v -> v = name
-  | Fn (_, body) -> contains_rec_call name body
+  | Fn (_, _, body) -> contains_rec_call name body
   | FnAp items -> List.exists (contains_rec_call name) items
   | Let (bindings, body) ->
     let rec_in_bindings =
