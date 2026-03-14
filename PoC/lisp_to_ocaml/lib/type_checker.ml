@@ -9,7 +9,7 @@ type type_check_error =
   | UnboundVariable of var
   | TypeMismatch of lisp_type * lisp_type
   | ConditionNotBool of lisp_type
-  | BranchTypeMismatch of lisp_type * lisp_type
+  | BranchTypeMismatch of lisp_type * lisp_type list
   | NotAFunction of lisp_type
   | EmptyList
   | ListElementTypeMismatch
@@ -364,7 +364,7 @@ and judge_if_type (pred : lisp_expr) (then_expr : lisp_expr) (else_expr : lisp_e
   if then_type = else_type then
     succeed then_type
   else
-    fail [ BranchTypeMismatch (then_type, else_type) ]
+    fail [ BranchTypeMismatch (then_type, [ else_type ]) ]
 
 
 and jugde_if_pred_type (pred : lisp_expr) : lisp_type type_checker =
@@ -380,9 +380,10 @@ and judge_list_type (elements : lisp_expr list) : lisp_type type_checker =
   | [] -> fail [ EmptyList ]
   | hd :: tl ->
     let* hd_type = judge_type (Expr hd) in
-    (* boolを返す型検査関数があってもいいかも *)
-    let* tl_types = sequence (List.map (fun e -> judge_type (Expr e)) tl) in
-    if List.for_all (fun ty -> ty = hd_type) tl_types then
+    let* rest_types =
+      List.map (fun tl_expr -> judge_type (Expr tl_expr)) tl |> sequence
+    in
+    if List.for_all (fun rest_type -> hd_type = rest_type) rest_types then
       succeed (List hd_type)
     else
       fail [ ListElementTypeMismatch ]
@@ -391,27 +392,37 @@ and judge_list_type (elements : lisp_expr list) : lisp_type type_checker =
 and judge_match_type (value : lisp_expr) (cases : matching_case list)
   : lisp_type type_checker
   =
-  let* _value_type = judge_type (Expr value) in
+  let* value_type = judge_type (Expr value) in
   match cases with
   | [] -> fail [ EmptyMatch ]
   | (patt, expr) :: rest ->
-    let* first_type = local (extend_env_with_pattern patt) (judge_type (Expr expr)) in
-    let rec check_uniform ty = function
-      | [] -> succeed ty
-      | (patt, expr) :: rest ->
-        let* case_type = local (extend_env_with_pattern patt) (judge_type (Expr expr)) in
-        if case_type = ty then
-          check_uniform ty rest
-        else
-          fail [ BranchTypeMismatch (ty, case_type) ]
+    let* first_type =
+      local (extend_env_with_pattern patt value_type) (judge_type (Expr expr))
     in
-    check_uniform first_type rest
+    let* rest_types =
+      rest
+      |> List.map (fun (patt', expr') ->
+        local (extend_env_with_pattern patt' value_type) (judge_type (Expr expr')))
+      |> sequence
+    in
+    if List.for_all (fun rest_type -> first_type = rest_type) rest_types then
+      succeed first_type
+    else
+      fail [ BranchTypeMismatch (first_type, rest_types) ]
 
 
-and extend_env_with_pattern (patt : matching_patt) (env : lisp_type_env) : lisp_type_env =
-  match patt with
-  | Bind var -> extend var (Var "T") env
-  | Int _ | Bool _ | Wildcard -> env
-  | List patts -> List.fold_right (fun p acc -> extend_env_with_pattern p acc) patts env
-  | Cons (hd_patt, tl_patt) ->
-    extend_env_with_pattern hd_patt env |> extend_env_with_pattern tl_patt
+and extend_env_with_pattern
+      (patt : matching_patt)
+      (value_type : lisp_type)
+      (env : lisp_type_env)
+  : lisp_type_env
+  =
+  match patt, value_type with
+  | Bind var, ty -> extend var ty env
+  | (Int _ | Bool _ | Wildcard), _ -> env
+  | List patts, List elem_ty ->
+    List.fold_right (fun p acc -> extend_env_with_pattern p elem_ty acc) patts env
+  | Cons (hd_patt, tl_patt), List elem_ty ->
+    extend_env_with_pattern hd_patt elem_ty env
+    |> extend_env_with_pattern tl_patt value_type
+  | (List _ | Cons _), _ -> env
