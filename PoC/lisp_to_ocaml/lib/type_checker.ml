@@ -34,6 +34,7 @@ let init_type_env () : lisp_type_env =
   ]
 
 
+(*
 (** 型環境から変数の型を検索する *)
 let lookup_type (name : var) (env : lisp_type_env)
   : (lisp_type, type_check_error) validation
@@ -206,8 +207,7 @@ and judge_match_type
 (** パターンから束縛される変数を型環境に追加する *)
 and extend_env_with_pattern (env : lisp_type_env) (_patt : matching_patt) : lisp_type_env =
   (* 一旦、パターンの型推論は行わず、環境をそのまま返す *)
-  env
-
+  env *)
 
 (** Reader + Validation モナドとしての型検査器。型環境(lisp_type_env)文脈の関数を適用するための操作を提供する  *)
 module TypeChecker = struct
@@ -274,22 +274,22 @@ let extend (name : var) (ty : lisp_type) (env : lisp_type_env) : lisp_type_env =
   (name, ty) :: env
 
 
-let check_name_typing (name : var) : lisp_type TypeChecker.type_checker =
+let judge_name_type (name : var) : lisp_type TypeChecker.type_checker =
   let* env = ask in
   match lookup name env with
   | Some ty -> succeed ty
   | None -> fail [ UnboundVariable name ]
 
 
-let rec check_type (expr : lisp) : lisp_type TypeChecker.type_checker =
+let rec judge_type (expr : lisp) : lisp_type TypeChecker.type_checker =
   match expr with
   | Expr (Int _) -> succeed Int
   | Expr (Bool _) -> succeed Bool
-  | Expr (Sym name) -> check_name_typing name
-  | Expr (Fn (args, body)) -> check_fn_type args body
+  | Expr (Sym name) -> judge_name_type name
+  | Expr (Fn (args, body)) -> judge_fn_type args body
   | _ -> fail [ NotImplemented "" ]
 
 
-and check_fn_type (args : typed_var list) (body : lisp_expr) : lisp_type type_checker =
+and judge_fn_type (args : typed_var list) (body : lisp_expr) : lisp_type type_checker =
   let append_arg_types env = args @ env in
-  local append_arg_types (check_type (Expr body))
+  local append_arg_types (judge_type (Expr body))

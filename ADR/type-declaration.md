@@ -2,10 +2,11 @@
 
 ## ステータス
 
-IN DISCUSSION
+ARCHIVED
 
 - 2026-03-09 ARCHIVED. `docs/type-declaration.md`にまとめた。
 - 2026-03-09 back to IN DISCUSSION。再考中
+- 2026-03-14 ARCHIVED.
 
 ## 型宣言の形式
 
