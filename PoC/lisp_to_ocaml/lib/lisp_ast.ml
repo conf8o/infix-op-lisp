@@ -7,12 +7,6 @@ let top_level_scope_id = ""
 let make_var s i = s, i
 let top_var s = make_var s top_level_scope_id
 
-type bound_var = var * lisp_type
-
-type binding_patt =
-  | Val of bound_var
-  | Func of var * bound_var list * lisp_type
-
 type matching_patt =
   | Bind of var
   | Int of int
@@ -20,6 +14,14 @@ type matching_patt =
   | List of matching_patt list
   | Cons of matching_patt * matching_patt
   | Wildcard
+
+type bound_var =
+  | Var of var * lisp_type
+  | Matching of matching_patt
+
+type binding_patt =
+  | Val of bound_var
+  | Func of var * bound_var list * lisp_type
 
 type lisp_expr =
   | Int of int
