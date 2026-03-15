@@ -31,69 +31,67 @@ let init_type_env () : lisp_type_env =
   ]
 
 
+type 'a type_check_result = ('a, type_check_error) Validation.validation
+
 (** Reader + Validation モナドとしての型検査器。型環境(lisp_type_env)文脈の関数を適用するための操作を提供する  *)
-module TypeChecker = struct
-  type 'a type_check_result = ('a, type_check_error) Validation.validation
-  type 'a type_checker = TypeChecker of (lisp_type_env -> 'a type_check_result)
+type 'a type_checker = TypeChecker of (lisp_type_env -> 'a type_check_result)
 
-  let succeed x = TypeChecker (fun _ -> Validation.succeed x)
-  let fail errs = TypeChecker (fun _ -> Validation.fail errs)
+let succeed x = TypeChecker (fun _ -> Validation.succeed x)
+let fail errs = TypeChecker (fun _ -> Validation.fail errs)
 
-  let from_result (v : 'a type_check_result) : 'a type_checker =
-    match v with
-    | Validation.Success x -> succeed x
-    | Validation.Failure errs -> fail errs
+let from_result (v : 'a type_check_result) : 'a type_checker =
+  match v with
+  | Validation.Success x -> succeed x
+  | Validation.Failure errs -> fail errs
 
 
-  let map f (TypeChecker check) = TypeChecker (fun env -> Validation.map f (check env))
+let map f (TypeChecker check) = TypeChecker (fun env -> Validation.map f (check env))
 
-  let ( <*> ) (TypeChecker check_f) (TypeChecker check_x) =
-    TypeChecker (fun env -> Validation.(check_f env <*> check_x env))
-
-
-  let ( >>= ) (TypeChecker check) f =
-    TypeChecker
-      (fun env ->
-        let open Validation.Syntax in
-        let* x = check env in
-        let (TypeChecker check_after_f) = f x in
-        check_after_f env)
+let ( <*> ) (TypeChecker check_f) (TypeChecker check_x) =
+  TypeChecker (fun env -> Validation.(check_f env <*> check_x env))
 
 
-  (** 現在の型環境を取ってくる *)
-  let ask = TypeChecker (fun env -> Validation.succeed env)
-
-  (** 現在の環境を引数とする関数を適用して戻り値を得る関数。 *)
-  let asks f = ask >>= fun env -> succeed (f env)
-
-  (** ローカルに更新される型環境で検査を実行する *)
-  let local update (TypeChecker check) = TypeChecker (fun env -> check (update env))
-
-  let lift2 f c1 c2 = map f c1 <*> c2
-  let product c1 c2 = lift2 (fun x y -> x, y) c1 c2
-
-  module Syntax = struct
-    let ( let* ) = ( >>= )
-    let ( let+ ) x f = map f x
-    let ( and+ ) = product
-  end
-
-  let sequence (checkers : 'a type_checker list) : 'a list type_checker =
-    List.fold_right
-      (fun checker acc_checker ->
-         product checker acc_checker |> map (fun (x, xs) -> x :: xs))
-      checkers
-      (succeed [])
+let ( >>= ) (TypeChecker check) f =
+  TypeChecker
+    (fun env ->
+      let open Validation.Syntax in
+      let* x = check env in
+      let (TypeChecker check_after_f) = f x in
+      check_after_f env)
 
 
-  let run (TypeChecker check : 'a type_checker) (env : lisp_type_env)
-    : 'a type_check_result
-    =
-    check env
+(** 現在の型環境を取ってくる *)
+let ask = TypeChecker (fun env -> Validation.succeed env)
+
+(** 現在の環境を引数とする関数を適用して戻り値を得る関数。 *)
+let asks f = ask >>= fun env -> succeed (f env)
+
+(** ローカルに更新される型環境で検査を実行する *)
+let local update (TypeChecker check) = TypeChecker (fun env -> check (update env))
+
+let lift2 f c1 c2 = map f c1 <*> c2
+let product c1 c2 = lift2 (fun x y -> x, y) c1 c2
+
+module Syntax = struct
+  let ( let* ) = ( >>= )
+  let ( let+ ) x f = map f x
+  let ( and+ ) = product
 end
 
-open TypeChecker
-open TypeChecker.Syntax
+let sequence (checkers : 'a type_checker list) : 'a list type_checker =
+  List.fold_right
+    (fun checker acc_checker ->
+       product checker acc_checker |> map (fun (x, xs) -> x :: xs))
+    checkers
+    (succeed [])
+
+
+let run (TypeChecker check : 'a type_checker) (env : lisp_type_env) : 'a type_check_result
+  =
+  check env
+
+
+open Syntax
 
 let lookup (name : var) (env : lisp_type_env) : lisp_type option = List.assoc_opt name env
 
@@ -142,10 +140,10 @@ and judge_fnap_type (items : lisp_expr list) : lisp_type type_checker =
   | [ single ] -> judge_type (Expr single)
   | fn :: args ->
     let* fn_type = judge_type (Expr fn) in
-    judge_apply_type fn_type args
+    judge_fnap_result_type fn_type args
 
 
-and judge_apply_type (fn_type : lisp_type) (args : lisp_expr list)
+and judge_fnap_result_type (fn_type : lisp_type) (args : lisp_expr list)
   : lisp_type type_checker
   =
   match args with
@@ -156,7 +154,7 @@ and judge_apply_type (fn_type : lisp_type) (args : lisp_expr list)
        let* actual_arg_type = judge_type (Expr arg) in
        if actual_arg_type = dom then (
          match codom with
-         | Arrow _ -> judge_apply_type codom rest
+         | Arrow _ -> judge_fnap_result_type codom rest
          | ty -> succeed ty
        ) else
          fail [ TypeMismatch (dom, actual_arg_type) ]

@@ -10,10 +10,10 @@ let v name =
   make_var name ("__" ^ string_of_int !scope_counter)
 
 
-let run_type_check checker env = TypeChecker.run checker env
+let run checker env = run checker env
 
 let assert_type_ok expected_type checker =
-  let result = run_type_check checker (init_type_env ()) in
+  let result = run checker (init_type_env ()) in
   match result with
   | Success actual_type ->
     Alcotest.(check bool) "type matches" true (expected_type = actual_type)
@@ -21,7 +21,7 @@ let assert_type_ok expected_type checker =
 
 
 let assert_type_error checker =
-  let result = run_type_check checker (init_type_env ()) in
+  let result = run checker (init_type_env ()) in
   match result with
   | Success _ -> Alcotest.fail "Expected type error, but got success"
   | Failure _ -> ()
@@ -102,25 +102,25 @@ let test_judge_fnap_type_addition () =
   assert_type_ok T.Int checker
 
 
-(** judge_apply_type のテスト *)
-let test_judge_apply_type_single_arg () =
+(** judge_fnap_result_type のテスト *)
+let test_judge_fnap_result_type_single_arg () =
   let fn_type = T.Arrow (T.Int, T.Int) in
   let args = [ Int 42 ] in
-  let checker = judge_apply_type fn_type args in
+  let checker = judge_fnap_result_type fn_type args in
   assert_type_ok T.Int checker
 
 
-let test_judge_apply_type_multiple_args () =
+let test_judge_fnap_result_type_multiple_args () =
   let fn_type = T.Arrow (T.Int, T.Arrow (T.Int, T.Int)) in
   let args = [ Int 1; Int 2 ] in
-  let checker = judge_apply_type fn_type args in
+  let checker = judge_fnap_result_type fn_type args in
   assert_type_ok T.Int checker
 
 
-let test_judge_apply_type_no_args () =
+let test_judge_fnap_result_type_no_args () =
   let fn_type = T.Int in
   let args = [] in
-  let checker = judge_apply_type fn_type args in
+  let checker = judge_fnap_result_type fn_type args in
   assert_type_ok T.Int checker
 
 
@@ -227,10 +227,10 @@ let () =
         ; test_case "single expression" `Quick test_judge_fnap_type_single
         ; test_case "addition" `Quick test_judge_fnap_type_addition
         ] )
-    ; ( "judge_apply_type"
-      , [ test_case "single argument" `Quick test_judge_apply_type_single_arg
-        ; test_case "multiple arguments" `Quick test_judge_apply_type_multiple_args
-        ; test_case "no arguments" `Quick test_judge_apply_type_no_args
+    ; ( "judge_fnap_result_type"
+      , [ test_case "single argument" `Quick test_judge_fnap_result_type_single_arg
+        ; test_case "multiple arguments" `Quick test_judge_fnap_result_type_multiple_args
+        ; test_case "no arguments" `Quick test_judge_fnap_result_type_no_args
         ] )
     ; ( "judge_let_type"
       , [ test_case "single binding" `Quick test_judge_let_type_single_binding
