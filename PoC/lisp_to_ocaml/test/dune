@@ -9,3 +9,8 @@
  (name test_lisp_ast)
  (modules test_lisp_ast)
  (libraries lisp_to_ocaml alcotest))
+
+(test
+ (name test_type_checker)
+ (modules test_type_checker)
+ (libraries lisp_to_ocaml alcotest))

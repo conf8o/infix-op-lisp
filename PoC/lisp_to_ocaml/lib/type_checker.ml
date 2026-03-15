@@ -84,6 +84,12 @@ module TypeChecker = struct
          product checker acc_checker |> map (fun (x, xs) -> x :: xs))
       checkers
       (succeed [])
+
+
+  let run (TypeChecker check : 'a type_checker) (env : lisp_type_env)
+    : 'a type_check_result
+    =
+    check env
 end
 
 open TypeChecker
@@ -107,7 +113,7 @@ let rec judge_type (expr : lisp) : lisp_type type_checker =
   | Expr (Int _) -> succeed Int
   | Expr (Bool _) -> succeed Bool
   | Expr (Sym name) -> judge_name_type name
-  | Expr (Fn (args, return_type, body)) -> judge_lamb_type args (body, return_type)
+  | Expr (Fn (args, return_type, body)) -> judge_fn_type args (body, return_type)
   | Expr (FnAp items) -> judge_fnap_type items
   | Expr (Let (bindings, body)) -> judge_let_type bindings body
   | Expr (If (pred, then_expr, else_expr)) -> judge_if_type pred then_expr else_expr
@@ -116,7 +122,7 @@ let rec judge_type (expr : lisp) : lisp_type type_checker =
   | _ -> fail [ NotImplemented "" ]
 
 
-and judge_lamb_type (args : bound_var list) ((body, ty) : lisp_expr * lisp_type)
+and judge_fn_type (args : bound_var list) ((body, ty) : lisp_expr * lisp_type)
   : lisp_type type_checker
   =
   let append_arg_types env = args @ env in
@@ -170,7 +176,7 @@ and judge_let_type (bindings : bindings) (body : lisp_expr) : lisp_type type_che
          else
            fail [ TypeMismatch (expected_type, expr_type) ]
        | Func (name, args, return_type) ->
-         let* lamb_type = judge_lamb_type args (expr, return_type) in
+         let* lamb_type = judge_fn_type args (expr, return_type) in
          local (extend name lamb_type) (process_bindings rest))
   in
   process_bindings bindings
