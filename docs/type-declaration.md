@@ -4,7 +4,7 @@
 
 ```clojure
 (def x : Int 10)
-(def (f x y) : Int) (+ x y)
+(def (f x y) : Int (+ x y))
 (def (f (x : Int) (y : Int)) : Int (+ x y))
 ```
 
