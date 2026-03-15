@@ -12,7 +12,7 @@ type type_check_error =
   | BranchTypeMismatch of lisp_type * lisp_type list
   | NotAFunction of lisp_type
   | EmptyList
-  | ListElementTypeMismatch
+  | ListElementTypeMismatch of lisp_type * lisp_type list
   | EmptyMatch
   | NotImplemented of string
 
@@ -146,14 +146,14 @@ and judge_apply_type (fn_type : lisp_type) (args : lisp_expr list)
   | [] -> succeed fn_type
   | arg :: rest ->
     (match fn_type with
-     | Arrow (arg_type, result_type) ->
+     | Arrow (dom, codom) ->
        let* actual_arg_type = judge_type (Expr arg) in
-       if actual_arg_type = arg_type then (
-         match result_type with
-         | Arrow _ -> judge_apply_type result_type rest
+       if actual_arg_type = dom then (
+         match codom with
+         | Arrow _ -> judge_apply_type codom rest
          | ty -> succeed ty
        ) else
-         fail [ TypeMismatch (arg_type, actual_arg_type) ]
+         fail [ TypeMismatch (dom, actual_arg_type) ]
      | _ -> fail [ NotAFunction fn_type ])
 
 
@@ -201,13 +201,9 @@ and judge_list_type (elements : lisp_expr list) : lisp_type type_checker =
   | [] -> fail [ EmptyList ]
   | hd :: tl ->
     let* hd_type = judge_type (Expr hd) in
-    let* rest_types =
-      List.map (fun tl_expr -> judge_type (Expr tl_expr)) tl |> sequence
-    in
-    if List.for_all (fun rest_type -> hd_type = rest_type) rest_types then
-      succeed (List hd_type)
-    else
-      fail [ ListElementTypeMismatch ]
+    let rest_checkers = List.map (fun tl_expr -> judge_type (Expr tl_expr)) tl in
+    judge_sequence_type rest_checkers hd_type (fun (ty, seq_types) ->
+      ListElementTypeMismatch (ty, seq_types))
 
 
 and judge_match_type (value : lisp_expr) (cases : matching_case list)
@@ -220,16 +216,26 @@ and judge_match_type (value : lisp_expr) (cases : matching_case list)
     let* first_type =
       local (extend_env_with_pattern patt value_type) (judge_type (Expr expr))
     in
-    let* rest_types =
+    let rest_checkers =
       rest
       |> List.map (fun (patt', expr') ->
         local (extend_env_with_pattern patt' value_type) (judge_type (Expr expr')))
-      |> sequence
     in
-    if List.for_all (fun rest_type -> first_type = rest_type) rest_types then
-      succeed first_type
-    else
-      fail [ BranchTypeMismatch (first_type, rest_types) ]
+    judge_sequence_type rest_checkers first_type (fun (ty, seq_types) ->
+      BranchTypeMismatch (ty, seq_types))
+
+
+and judge_sequence_type
+      (checker_seq : lisp_type type_checker list)
+      (expected_type : lisp_type)
+      (error : lisp_type * lisp_type list -> type_check_error)
+  : lisp_type type_checker
+  =
+  let* seq_types = sequence checker_seq in
+  if List.for_all (fun ty -> expected_type = ty) seq_types then
+    succeed expected_type
+  else
+    fail [ error (expected_type, seq_types) ]
 
 
 and extend_env_with_pattern

@@ -3,13 +3,13 @@
 - defでの変数の型宣言
 
 ```clojure
-(def (x : Int) 10)
-(def ((f x y) : Int) (+ x y))
-(def ((f (x : Int) (y : Int)) : Int) (+ x y))
+(def x : Int 10)
+(def (f x y) : Int) (+ x y)
+(def (f (x : Int) (y : Int)) : Int (+ x y))
 ```
 
 ```clojure
-(def ((f x y) : Int) (+ x y))
+(def (f x y) : Int (+ x y))
 ; (f x y) という形で適用した結果 Int になるという意味合いになるのでこの形式を採用
 ; (+ x y) という式がIntであることもこの形式の根拠となっている
 ```

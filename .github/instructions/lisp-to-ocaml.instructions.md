@@ -29,6 +29,3 @@ OCamlのバージョンは5.4
 
 - parsetree実装(lispからocamlに変換するときに使う)
   - PoC/lisp_to_ocaml/docs/parsetree_conversion.md
-- lispにおける型システムの導入
-  - ADR/type-system.md
- 
