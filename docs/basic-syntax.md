@@ -11,7 +11,7 @@
   expr)
 ; これは下記の糖衣構文
 (def fname
-  ((\ arg1 arg2 ...)
+  (fn (arg1 arg2 ...)
     expr))
 
 ; 束縛
@@ -19,7 +19,7 @@
       name2 expr2
       (fname1 arg1 arg2) fexpr1
       ; これは下記関数束縛の糖衣構文
-      fname2 ((\ arg1 arg2) fexpr2)
+      fname2 (fn (arg1 arg2) fexpr2)
       ...)
   body)
 
@@ -42,7 +42,7 @@
   else  exprN)
 
 ; 無名関数
-((\ arg1 arg2 ...)
+(fn (arg1 arg2 ...)
   body)
 
 ; 非モナディックな逐次実行

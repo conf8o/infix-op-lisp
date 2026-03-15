@@ -46,9 +46,7 @@ let test_shadowing_by_function_arg () =
   let fact1 = v "fact" in
   let fact2 = v "fact" in
   let n = v "n" in
-  let expr =
-    Lamb ([ fact2, Lisp_type.Int; n, Lisp_type.Int ], Lisp_type.Abbr, Sym fact2)
-  in
+  let expr = Fn ([ fact2, Lisp_type.Int; n, Lisp_type.Int ], Lisp_type.Abbr, Sym fact2) in
   let result = contains_rec_call fact1 expr in
   Alcotest.(check bool) "shadowed by function argument" false result
 

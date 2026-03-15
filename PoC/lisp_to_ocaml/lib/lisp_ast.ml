@@ -11,7 +11,7 @@ type bound_var = var * lisp_type
 
 type binding_patt =
   | Val of bound_var
-  | Fn of var * bound_var list * lisp_type
+  | Func of var * bound_var list * lisp_type
 
 type matching_patt =
   | Bind of var
@@ -25,7 +25,7 @@ type lisp_expr =
   | Int of int
   | Bool of bool
   | Sym of var
-  | Lamb of bound_var list * lisp_type * lisp_expr
+  | Fn of bound_var list * lisp_type * lisp_expr
   | FnAp of lisp_expr list
   | Let of bindings * lisp_expr
   | If of lisp_expr * lisp_expr * lisp_expr
@@ -53,7 +53,7 @@ let rec contains_rec_call (name : var) (expr : lisp_expr) : bool =
   match expr with
   | Int _ | Bool _ -> false
   | Sym v -> v = name
-  | Lamb (_, _, body) -> contains_rec_call name body
+  | Fn (_, _, body) -> contains_rec_call name body
   | FnAp items -> List.exists (contains_rec_call name) items
   | Let (bindings, body) ->
     let rec_in_bindings =

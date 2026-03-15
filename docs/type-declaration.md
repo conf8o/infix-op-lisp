@@ -1,21 +1,5 @@
 # 型宣言・型注釈
 
-`:` も型宣言・型注釈を行うための演算子ととらえ、前置スタイル、中置スタイルで型宣言できます。
-
-```clojure
-; --- 前置スタイル ---
-(: x Int)
-(: f (Int -> Int))
-(: +  (Int -> Int -> Int))
-
-; --- 中置スタイル(同じ情報、異なる糖衣構文) ---
-(x : Int)
-(f : (Int -> Int))
-(+ : (Int -> Int -> Int))
-```
-
-## 型宣言の例
-
 - defでの変数の型宣言
 
 ```clojure
@@ -45,16 +29,15 @@
 ```clojure
 (let ((x : Int) 10
       ((f x y) : Int) (+ x y)
-      (g : (Int -> Int -> Int))) ((\ x y) (* x y))
+      (g : (Int -> Int -> Int))) (fn (x y) (* x y))
   (g (f x 10) 20))
 ```
 
-- `\`(`lambda式`)での変数の型注釈
+- `fn`での型注釈
 
 ```clojure
-((\ (x : Int) (y : Int)) (+ x y))
-((\ x y) : Int) (+ x y)
-; 最初の括弧がわずらわしいので改善の余地あり
-(((\ (x : Int) (y : Int)) : Int) (+ x y))
+(fn ((x : Int) (y : Int)) (+ x y))
+(fn (x y) : Int (+ x y))
+(fn ((x : Int) (y : Int)) : Int (+ x y))
 ```
 

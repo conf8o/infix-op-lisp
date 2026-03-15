@@ -107,7 +107,7 @@ let rec judge_type (expr : lisp) : lisp_type type_checker =
   | Expr (Int _) -> succeed Int
   | Expr (Bool _) -> succeed Bool
   | Expr (Sym name) -> judge_name_type name
-  | Expr (Lamb (args, return_type, body)) -> judge_lamb_type args (body, return_type)
+  | Expr (Fn (args, return_type, body)) -> judge_lamb_type args (body, return_type)
   | Expr (FnAp items) -> judge_fnap_type items
   | Expr (Let (bindings, body)) -> judge_let_type bindings body
   | Expr (If (pred, then_expr, else_expr)) -> judge_if_type pred then_expr else_expr
@@ -169,7 +169,7 @@ and judge_let_type (bindings : bindings) (body : lisp_expr) : lisp_type type_che
            local (extend name expr_type) (process_bindings rest)
          else
            fail [ TypeMismatch (expected_type, expr_type) ]
-       | Fn (name, args, return_type) ->
+       | Func (name, args, return_type) ->
          let* lamb_type = judge_lamb_type args (expr, return_type) in
          local (extend name lamb_type) (process_bindings rest))
   in

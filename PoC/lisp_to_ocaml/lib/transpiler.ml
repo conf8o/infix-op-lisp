@@ -137,7 +137,7 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
   | Int n -> to_constant_int_exp n
   | Bool b -> to_constant_bool_exp b
   | Sym name -> to_identifier_exp (to_unique_var name)
-  | Lamb (args, ty, body) ->
+  | Fn (args, ty, body) ->
     let params = fn_args_to_params args in
     let body_exp = to_ocaml_exp body in
     let type_constraint = Some (Pconstraint (lisp_type_to_core_type ty)) in
@@ -233,21 +233,20 @@ and binding_to_value_binding (b : binding) : value_binding * rec_flag =
   let pat, expr = b in
   match pat with
   | Val (name, _val_type) ->
-    (* val_typeを組み込む *)
     (match expr with
-     | Lamb (args, return_type, expr) ->
+     | Fn (args, return_type, expr) ->
        let rec_flag = judge_rec name expr in
-       let fn_exp = to_ocaml_exp (Lamb (args, return_type, expr)) in
+       let fn_exp = to_ocaml_exp (Fn (args, return_type, expr)) in
        Vb.mk (to_variable_pat name) fn_exp, rec_flag
      | _ -> Vb.mk (to_variable_pat name) (to_ocaml_exp expr), Nonrecursive)
-  | Fn (name, args, return_type) ->
+  | Func (name, args, return_type) ->
     let (fn_type : lisp_type) =
       List.fold_right
         (fun (_, arg_type) acc_fn_type -> Arrow (arg_type, acc_fn_type))
         args
         return_type
     in
-    binding_to_value_binding (Val (name, fn_type), Lamb (args, return_type, expr))
+    binding_to_value_binding (Val (name, fn_type), Fn (args, return_type, expr))
 
 
 (** LispのASTをOCamlのParsetree構造に変換する *)

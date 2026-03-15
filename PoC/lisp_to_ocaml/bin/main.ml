@@ -23,8 +23,8 @@ let () =
        (match lst
          [] []
          (:: pivot rest)
-           (let (smaller (filter ((\ x) (< x pivot)) rest)
-                 greater (filter ((\ x) (>= x pivot)) rest))
+           (let (smaller (filter (fn (x) (< x pivot)) rest)
+                 greater (filter (fn (x) (>= x pivot)) rest))
              (append (append (quicksort smaller) (:: pivot []))
                      (quicksort greater)))))
      
@@ -34,7 +34,7 @@ let () =
   let program =
     [ Decl
         (Def
-           ( Fn
+           ( Func
                ( v "filter"
                , [ (v "pred", Lisp_type.(Arrow (Int, Bool)))
                  ; (v "lst1", Lisp_type.(List Int))
@@ -55,7 +55,7 @@ let () =
                  ] ) ))
     ; Decl
         (Def
-           ( Fn
+           ( Func
                ( v "append"
                , [ (v "lst1_3", Lisp_type.(List Int))
                  ; (v "lst2_3", Lisp_type.(List Int))
@@ -73,7 +73,8 @@ let () =
                  ] ) ))
     ; Decl
         (Def
-           ( Fn (v "quicksort", [ (v "lst5", Lisp_type.(List Int)) ], Lisp_type.(List Int))
+           ( Func
+               (v "quicksort", [ (v "lst5", Lisp_type.(List Int)) ], Lisp_type.(List Int))
            , Match
                ( Sym (v "lst5")
                , [ List [], List []
@@ -82,7 +83,7 @@ let () =
                        ( [ ( Val (v "smaller", Lisp_type.(List Int))
                            , FnAp
                                [ Sym (v "filter")
-                               ; Lamb
+                               ; Fn
                                    ( [ v "x7", Lisp_type.Int ]
                                    , Lisp_type.Bool
                                    , FnAp [ Sym (v "<"); Sym (v "x7"); Sym (v "pivot") ]
@@ -92,7 +93,7 @@ let () =
                          ; ( Val (v "greater", Lisp_type.(List Int))
                            , FnAp
                                [ Sym (v "filter")
-                               ; Lamb
+                               ; Fn
                                    ( [ v "x8", Lisp_type.Int ]
                                    , Lisp_type.Bool
                                    , FnAp [ Sym (v ">="); Sym (v "x8"); Sym (v "pivot") ]
@@ -126,5 +127,5 @@ let () =
   Pprintast.structure fmt structures;
   Format.pp_print_flush fmt ();
   close_out oc;
-  Printf.printf "Wrote bin/generated.ml\n";
+  Printf.printf "Wrote bin/generated.mlfnn";
   print_endline "end"
