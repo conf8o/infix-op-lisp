@@ -70,3 +70,36 @@ let rec contains_rec_call (name : var) (expr : lisp_expr) : bool =
     let in_value = contains_rec_call name value in
     let in_cases = List.exists (fun (_, expr) -> contains_rec_call name expr) cases in
     in_value || in_cases
+
+
+let rec match_patt_to_type (patt : matching_patt) : (lisp_type, lisp_type list) result =
+  match patt with
+  | Bind (_, ty) -> Ok ty
+  | Int _ -> Ok Lisp_type.Int
+  | Bool _ -> Ok Lisp_type.Bool
+  | Wildcard -> Ok Lisp_type.Abbr
+  | List [] -> Ok Lisp_type.(List Abbr)
+  | List (hd :: tl) ->
+    let open Result.Syntax in
+    let open Extra.Result in
+    let* hd_type = match_patt_to_type hd in
+    let* elem_types = List.map match_patt_to_type tl |> sequence in
+    let all_elem_type_same = List.for_all (type_eq hd_type) elem_types in
+    if all_elem_type_same then
+      Ok (Lisp_type.List hd_type)
+    else
+      Error elem_types
+  | Cons (hd_patt, List []) ->
+    match_patt_to_type hd_patt
+    |> Result.map (fun hd_type -> Lisp_type.(List hd_type))
+  | Cons (hd_patt, tl_patt) ->
+    let open Result.Syntax in
+    let* hd_type = match_patt_to_type hd_patt in
+    match match_patt_to_type tl_patt with
+    | Ok (Lisp_type.List elem_type) ->
+      if type_eq hd_type elem_type then
+        Ok (Lisp_type.(List hd_type))
+      else
+        Error [ hd_type; elem_type ]
+    | Ok other_type -> Error [ hd_type; other_type ]
+    | Error tl_types -> Error (hd_type :: tl_types)
