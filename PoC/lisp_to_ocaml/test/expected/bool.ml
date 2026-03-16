@@ -1,1 +1,1 @@
-let (flag__1 : _) = true
+let flag__1 = true

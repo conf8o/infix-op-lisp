@@ -8,7 +8,8 @@ let make_var s i = s, i
 let top_var s = make_var s top_level_scope_id
 
 type matching_patt =
-  | Bind of var * lisp_type
+  | Bind of var
+  | TypedBind of var * lisp_type
   | Int of int
   | Bool of bool
   | List of matching_patt list
@@ -74,11 +75,12 @@ let rec contains_rec_call (name : var) (expr : lisp_expr) : bool =
 
 let rec match_patt_to_type (patt : matching_patt) : (lisp_type, lisp_type list) result =
   match patt with
-  | Bind (_, ty) -> Ok ty
+  | Bind _ -> Ok (Lisp_type.Inferred)
+  | TypedBind (_, ty) -> Ok ty
   | Int _ -> Ok Lisp_type.Int
   | Bool _ -> Ok Lisp_type.Bool
-  | Wildcard -> Ok Lisp_type.Abbr
-  | List [] -> Ok Lisp_type.(List Abbr)
+  | Wildcard -> Ok Lisp_type.Inferred
+  | List [] -> Ok Lisp_type.(List Inferred)
   | List (hd :: tl) ->
     let open Result.Syntax in
     let open Extra.Result in

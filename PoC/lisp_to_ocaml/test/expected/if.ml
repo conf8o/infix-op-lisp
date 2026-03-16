@@ -1,2 +1,1 @@
-let (abs__1 : int -> int) =
-  fun (x__2 : int) : int-> if x__2 < 0 then 0 - x__2 else x__2
+let abs__1 (x__2 : int) : int= if x__2 < 0 then 0 - x__2 else x__2

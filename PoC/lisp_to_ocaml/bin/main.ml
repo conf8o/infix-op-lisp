@@ -36,14 +36,14 @@ let () =
         (Def
            ( Func
                ( v "filter"
-               , [ Bind (v "pred", Lisp_type.(Arrow (Int, Bool)))
-                 ; Bind (v "lst1", Lisp_type.(List Int))
+               , [ TypedBind (v "pred", Lisp_type.(Arrow (Int, Bool)))
+                 ; TypedBind (v "lst1", Lisp_type.(List Int))
                  ]
                , Lisp_type.(List Int) )
            , Match
                ( Sym (v "lst1")
                , [ List [], List []
-                 ; ( Cons (Bind (v "x2", Abbr), Bind (v "xs2", Abbr))
+                 ; ( Cons (Bind (v "x2"), Bind (v "xs2"))
                    , If
                        ( FnAp [ Sym (v "pred"); Sym (v "x2") ]
                        , FnAp
@@ -57,14 +57,14 @@ let () =
         (Def
            ( Func
                ( v "append"
-               , [ Bind (v "lst1_3", Lisp_type.(List Int))
-                 ; Bind (v "lst2_3", Lisp_type.(List Int))
+               , [ TypedBind (v "lst1_3", Lisp_type.(List Int))
+                 ; TypedBind (v "lst2_3", Lisp_type.(List Int))
                  ]
                , Lisp_type.(List Int) )
            , Match
                ( Sym (v "lst1_3")
                , [ List [], Sym (v "lst2_3")
-                 ; ( Cons (Bind (v "x4", Abbr), Bind (v "xs4", Abbr))
+                 ; ( Cons (Bind (v "x4"), Bind (v "xs4"))
                    , FnAp
                        [ Sym (v "::")
                        ; Sym (v "x4")
@@ -74,28 +74,28 @@ let () =
     ; Decl
         (Def
            ( Func
-               (v "quicksort", [ Bind (v "lst5", Lisp_type.(List Int)) ], Lisp_type.(List Int))
+               (v "quicksort", [ Bind (v "lst5") ], Lisp_type.(List Int))
            , Match
                ( Sym (v "lst5")
                , [ List [], List []
-                 ; ( Cons (Bind (v "pivot", Abbr), Bind (v "rest", Abbr))
+                 ; ( Cons (Bind (v "pivot"), Bind (v "rest"))
                    , Let
-                       ( [ ( Val (Bind (v "smaller", Lisp_type.(List Int)))
+                       ( [ ( Val (Bind (v "smaller"))
                            , FnAp
                                [ Sym (v "filter")
                                ; Fn
-                                   ( [ Bind (v "x7", Lisp_type.Int) ]
-                                   , Lisp_type.Bool
+                                   ( [ Bind (v "x7") ]
+                                   , Lisp_type.Inferred
                                    , FnAp [ Sym (v "<"); Sym (v "x7"); Sym (v "pivot") ]
                                    )
                                ; Sym (v "rest")
                                ] )
-                         ; ( Val (Bind (v "greater", Lisp_type.(List Int)))
+                         ; ( Val (Bind (v "greater"))
                            , FnAp
                                [ Sym (v "filter")
                                ; Fn
-                                   ( [ Bind (v "x8", Lisp_type.Int) ]
-                                   , Lisp_type.Bool
+                                   ( [ Bind (v "x8") ]
+                                   , Lisp_type.Inferred
                                    , FnAp [ Sym (v ">="); Sym (v "x8"); Sym (v "pivot") ]
                                    )
                                ; Sym (v "rest")
@@ -113,11 +113,11 @@ let () =
                  ] ) ))
     ; Decl
         (Def
-           ( Val (Bind (v "unsorted", Lisp_type.(List Int)))
+           ( Val (Bind (v "unsorted"))
            , List [ Int 3; Int 1; Int 4; Int 1; Int 5; Int 9; Int 2; Int 6 ] ))
     ; Decl
         (Def
-           ( Val (Bind (v "sorted", Lisp_type.(List Int)))
+           ( Val (Bind (v "sorted"))
            , FnAp [ Sym (v "quicksort"); Sym (v "unsorted") ] ))
     ]
   in

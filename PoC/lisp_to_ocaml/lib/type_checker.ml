@@ -271,7 +271,7 @@ and judge_common_type
   : lisp_type type_checker
   =
   let* seq_types = sequence checker_seq in
-  if List.for_all (fun ty -> expected_type = ty) seq_types then
+  if List.for_all (fun ty -> type_eq expected_type ty) seq_types then
     succeed expected_type
   else
     fail [ error (expected_type, seq_types) ]
@@ -279,7 +279,8 @@ and judge_common_type
 
 and extend_env_with_pattern (patt : matching_patt) (env : lisp_type_env) : lisp_type_env =
   match patt with
-  | Bind (var, ty) -> extend var ty env
+  | Bind var -> extend var Inferred env
+  | TypedBind (var, ty) -> extend var ty env
   | Int _ | Bool _ | Wildcard -> env
   | List patts -> List.fold_right (fun p acc -> extend_env_with_pattern p acc) patts env
   | Cons (hd_patt, tl_patt) ->
