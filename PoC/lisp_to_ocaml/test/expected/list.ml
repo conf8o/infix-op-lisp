@@ -1,1 +1,1 @@
-let nums__1 = [1; 2; 3]
+let (nums__1 : int list) = [1; 2; 3]

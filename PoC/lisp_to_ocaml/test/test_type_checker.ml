@@ -64,7 +64,7 @@ let test_judge_type_sym () =
 let test_judge_fn_type_simple () =
   scope_counter := 0;
   let x = v "x" in
-  let args = [ x, T.Int ] in
+  let args = [ Bind (x, T.Int) ] in
   let body = Sym x in
   let return_type = T.Int in
   let checker = judge_fn_type args (body, return_type) in
@@ -76,7 +76,7 @@ let test_judge_fn_type_multiple_args () =
   let x = v "x" in
   let y = v "y" in
   let plus_var = top_var "+" in
-  let args = [ x, T.Int; y, T.Int ] in
+  let args = [ Bind (x, T.Int); Bind (y, T.Int) ] in
   let body = FnAp [ Sym plus_var; Sym x; Sym y ] in
   let return_type = T.Int in
   let checker = judge_fn_type args (body, return_type) in
@@ -128,7 +128,7 @@ let test_judge_fnap_result_type_no_args () =
 let test_judge_let_type_single_binding () =
   scope_counter := 0;
   let x = v "x" in
-  let bindings = [ Val (x, T.Int), Int 42 ] in
+  let bindings = [ Val (Bind (x, T.Int)), Int 42 ] in
   let body = Sym x in
   let checker = judge_let_type bindings body in
   assert_type_ok T.Int checker
@@ -139,7 +139,7 @@ let test_judge_let_type_multiple_bindings () =
   let x = v "x" in
   let y = v "y" in
   let plus_var = top_var "+" in
-  let bindings = [ Val (x, T.Int), Int 10; Val (y, T.Int), Int 20 ] in
+  let bindings = [ Val (Bind (x, T.Int)), Int 10; Val (Bind (y, T.Int)), Int 20 ] in
   let body = FnAp [ Sym plus_var; Sym x; Sym y ] in
   let checker = judge_let_type bindings body in
   assert_type_ok T.Int checker
@@ -188,20 +188,20 @@ let test_judge_match_type_int () =
   assert_type_ok T.Bool checker
 
 
-(** judge_sequence_type のテスト *)
-let test_judge_sequence_type_all_same () =
+(** judge_common_type のテスト *)
+let test_judge_common_type_all_same () =
   let checkers = [ judge_type (Expr (Int 1)); judge_type (Expr (Int 2)) ] in
   let expected = T.Int in
   let error (ty, seq_types) = BranchTypeMismatch (ty, seq_types) in
-  let checker = judge_sequence_type checkers expected error in
+  let checker = judge_common_type checkers expected error in
   assert_type_ok T.Int checker
 
 
-let test_judge_sequence_type_empty () =
+let test_judge_common_type_empty () =
   let checkers = [] in
   let expected = T.Int in
   let error (ty, seq_types) = BranchTypeMismatch (ty, seq_types) in
-  let checker = judge_sequence_type checkers expected error in
+  let checker = judge_common_type checkers expected error in
   assert_type_ok T.Int checker
 
 
@@ -245,8 +245,8 @@ let () =
         ; test_case "comparison" `Quick test_jugde_if_pred_type_comparison
         ] )
     ; "judge_match_type", [ test_case "int patterns" `Quick test_judge_match_type_int ]
-    ; ( "judge_sequence_type"
-      , [ test_case "all same type" `Quick test_judge_sequence_type_all_same
-        ; test_case "empty sequence" `Quick test_judge_sequence_type_empty
+    ; ( "judge_common_type"
+      , [ test_case "all same type" `Quick test_judge_common_type_all_same
+        ; test_case "empty sequence" `Quick test_judge_common_type_empty
         ] )
     ]

@@ -46,7 +46,7 @@ let test_shadowing_by_function_arg () =
   let fact1 = v "fact" in
   let fact2 = v "fact" in
   let n = v "n" in
-  let expr = Fn ([ fact2, Lisp_type.Int; n, Lisp_type.Int ], Lisp_type.Abbr, Sym fact2) in
+  let expr = Fn ([ Bind (fact2, Lisp_type.Int); Bind (n, Lisp_type.Int) ], Lisp_type.Abbr, Sym fact2) in
   let result = contains_rec_call fact1 expr in
   Alcotest.(check bool) "shadowed by function argument" false result
 
@@ -56,7 +56,7 @@ let test_shadowing_by_let () =
   scope_counter := 0;
   let fact1 = v "fact" in
   let fact2 = v "fact" in
-  let expr = Let ([ Val (fact2, Lisp_type.Abbr), Int 42 ], Sym fact2) in
+  let expr = Let ([ Val (Bind (fact2, Lisp_type.Abbr)), Int 42 ], Sym fact2) in
   let result = contains_rec_call fact1 expr in
   Alcotest.(check bool) "shadowed by let binding" false result
 
@@ -67,7 +67,7 @@ let test_recursion_in_let_binding () =
   let fact = v "fact" in
   let x = v "x" in
   let n = v "n" in
-  let expr = Let ([ Val (x, Lisp_type.Abbr), FnAp [ Sym fact; Sym n ] ], Sym x) in
+  let expr = Let ([ Val (Bind (x, Lisp_type.Abbr)), FnAp [ Sym fact; Sym n ] ], Sym x) in
   let result = contains_rec_call fact expr in
   Alcotest.(check bool) "recursion in let binding expression" true result
 
@@ -81,9 +81,9 @@ let test_shadowing_in_middle_of_bindings () =
   let y = v "y" in
   let expr =
     Let
-      ( [ Val (x, Lisp_type.Abbr), FnAp [ Sym fact; Int 5 ]
-        ; Val (fact_shadow, Lisp_type.Abbr), Int 100
-        ; Val (y, Lisp_type.Abbr), Sym fact_shadow
+      ( [ Val (Bind (x, Lisp_type.Abbr)), FnAp [ Sym fact; Int 5 ]
+        ; Val (Bind (fact_shadow, Lisp_type.Abbr)), Int 100
+        ; Val (Bind (y, Lisp_type.Abbr)), Sym fact_shadow
         ]
       , Sym fact_shadow )
   in
@@ -100,9 +100,9 @@ let test_early_shadowing_in_let () =
   let y = v "y" in
   let expr =
     Let
-      ( [ Val (fact2, Lisp_type.Abbr), Int 100
-        ; Val (x, Lisp_type.Abbr), Sym fact2
-        ; Val (y, Lisp_type.Abbr), Sym fact2
+      ( [ Val (Bind (fact2, Lisp_type.Abbr)), Int 100
+        ; Val (Bind (x, Lisp_type.Abbr)), Sym fact2
+        ; Val (Bind (y, Lisp_type.Abbr)), Sym fact2
         ]
       , Sym fact2 )
   in
@@ -118,7 +118,7 @@ let test_shadowing_by_match_pattern () =
   let fact_shadow = v "fact" in
   let expr =
     Match
-      (Sym x, [ Bind fact_shadow, Sym fact_shadow; Wildcard, FnAp [ Sym fact; Int 1 ] ])
+      (Sym x, [ Bind (fact_shadow, Abbr), Sym fact_shadow; Wildcard, FnAp [ Sym fact; Int 1 ] ])
   in
   let result = contains_rec_call fact expr in
   Alcotest.(check bool) "shadowed by match pattern in first case" true result

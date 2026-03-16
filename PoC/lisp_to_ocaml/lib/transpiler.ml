@@ -104,24 +104,6 @@ let to_typed_variable_pat (v : var) (t : lisp_type) : pattern =
 (* ================================ *)
 (* OCaml parsetree への変換まわり *)
 (* ================================ *)
-let fn_args_to_params (args : (var * lisp_type) list) : function_param list =
-  match args with
-  | [] ->
-    (* 引数なし: fun () -> body のためのunitパラメータを作成 *)
-    [ { pparam_loc = Location.none
-      ; pparam_desc =
-          Pparam_val
-            (Nolabel, None, Pat.construct { txt = Lident "()"; loc = Location.none } None)
-      }
-    ]
-  | _ ->
-    List.map
-      (fun (arg, arg_type) ->
-         { pparam_loc = Location.none
-         ; pparam_desc = Pparam_val (Nolabel, None, to_typed_variable_pat arg arg_type)
-         })
-      args
-
 
 (** 変数名が式の中に現れるかを判断し、再帰フラグを返す *)
 let judge_rec (name : var) (expr : lisp_expr) : rec_flag =
@@ -170,6 +152,25 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
     Exp.match_ value_exp ocaml_cases
 
 
+and fn_args_to_params (matching_patts : matching_patt list) : function_param list =
+  match matching_patts with
+  | [] ->
+    (* 引数なし: fun () -> body のためのunitパラメータを作成 *)
+    [ { pparam_loc = Location.none
+      ; pparam_desc =
+          Pparam_val
+            (Nolabel, None, Pat.construct { txt = Lident "()"; loc = Location.none } None)
+      }
+    ]
+  | _ ->
+    List.map
+      (fun patt ->
+         { pparam_loc = Location.none
+         ; pparam_desc = Pparam_val (Nolabel, None, to_ocaml_pat patt)
+         })
+      matching_patts
+
+
 (** リスト式をOCamlのリスト構築式に変換する *)
 and to_list_exp (elements : lisp_expr list) : expression =
   match elements with
@@ -185,7 +186,7 @@ and to_list_exp (elements : lisp_expr list) : expression =
 (** matching_pattをOCamlのパターンに変換する *)
 and to_ocaml_pat (p : matching_patt) : pattern =
   match p with
-  | Bind name -> to_variable_pat name
+  | Bind (name, ty) -> to_typed_variable_pat name ty
   | Int n -> Pat.constant (Const.int n)
   | Bool b ->
     Pat.construct
@@ -232,21 +233,37 @@ and to_match_case (case : matching_case) : case =
 and binding_to_value_binding (b : binding) : value_binding * rec_flag =
   let pat, expr = b in
   match pat with
-  | Val (name, _val_type) ->
+  | Val (Bind (name, val_type)) ->
     (match expr with
      | Fn (args, return_type, expr) ->
        let rec_flag = judge_rec name expr in
        let fn_exp = to_ocaml_exp (Fn (args, return_type, expr)) in
-       Vb.mk (to_variable_pat name) fn_exp, rec_flag
-     | _ -> Vb.mk (to_variable_pat name) (to_ocaml_exp expr), Nonrecursive)
+       Vb.mk (to_typed_variable_pat name val_type) fn_exp, rec_flag
+     | _ -> Vb.mk (to_typed_variable_pat name val_type) (to_ocaml_exp expr), Nonrecursive)
+  | Val matching ->
+    let rec_flag = Nonrecursive in
+    let val_exp = to_ocaml_exp expr in
+    Vb.mk (to_ocaml_pat matching) val_exp, rec_flag
+  | Func (name, [], return_type) ->
+    let fn_type = Arrow (Unit, return_type) in
+    binding_to_value_binding (Val (Bind (name, fn_type)), Fn ([], return_type, expr))
   | Func (name, args, return_type) ->
-    let (fn_type : lisp_type) =
+    let fn_type =
       List.fold_right
-        (fun (_, arg_type) acc_fn_type -> Arrow (arg_type, acc_fn_type))
+        (fun patt acc_fn_type ->
+          match (match_patt_to_type patt, acc_fn_type) with
+          | Ok arg_type, Ok acc -> Ok (Arrow (arg_type, acc))
+          | Error error, Error acc_err -> Error (error @ acc_err)
+          | Error error, Ok _ -> Error error
+          | Ok _, Error acc_err -> Error acc_err)
         args
-        return_type
+        (Ok return_type)
     in
-    binding_to_value_binding (Val (name, fn_type), Fn (args, return_type, expr))
+    match fn_type with
+    | Ok fn_type ->
+      binding_to_value_binding (Val (Bind (name, fn_type)), Fn (args, return_type, expr))
+    | Error errs ->
+      failwith @@ String.concat "," @@ List.map Lisp_type.to_string errs
 
 
 (** LispのASTをOCamlのParsetree構造に変換する *)
