@@ -239,15 +239,33 @@ and judge_match_type (value : lisp_expr) (cases : matching_case list)
 
 
 and judge_match_patt_type (patt : matching_patt) : lisp_type type_checker =
-  let check_result =
-    match match_patt_to_type patt with
-    | Ok patt_type -> Validation.succeed patt_type
-    | Error (hd :: tl) -> Validation.fail [ ListElementTypeMismatch (hd, tl) ]
-    | Error [] ->
-      Validation.fail
-        [ NotImplemented "unexpected errror: empty error list in match_patt_to_type" ]
-  in
-  from_result check_result
+  match patt with
+  | Bind _ -> succeed Inferred
+  | TypedBind (_, ty) -> succeed ty
+  | Int _ -> succeed Int
+  | Bool _ -> succeed Bool
+  | Wildcard -> succeed Inferred
+  | List [] -> succeed (List Inferred)
+  | List (hd :: tl) ->
+    let* hd_type = judge_match_patt_type hd in
+    let* elem_types = sequence (List.map judge_match_patt_type tl) in
+    if List.for_all (type_eq hd_type) elem_types then
+      succeed (List hd_type)
+    else
+      fail [ ListElementTypeMismatch (hd_type, elem_types) ]
+  | Cons (hd_patt, List []) ->
+    let+ hd_type = judge_match_patt_type hd_patt in
+    List hd_type
+  | Cons (hd_patt, tl_patt) ->
+    let* hd_type = judge_match_patt_type hd_patt in
+    let* tl_type = judge_match_patt_type tl_patt in
+    (match tl_type with
+     | List elem_type ->
+       if type_eq hd_type elem_type then
+         succeed (List hd_type)
+       else
+         fail [ ListElementTypeMismatch (hd_type, [ elem_type ]) ]
+     | other_type -> fail [ ListElementTypeMismatch (hd_type, [ other_type ]) ])
 
 
 and judge_common_type
