@@ -67,7 +67,7 @@ let test_judge_fn_type_simple () =
   let args = [ TypedBind (x, T.Int) ] in
   let body = Sym x in
   let return_type = T.Int in
-  let checker = judge_fn_type args (body, return_type) in
+  let checker = judge_fn_type args return_type body in
   assert_type_ok (T.Arrow (T.Int, T.Int)) checker
 
 
@@ -79,7 +79,7 @@ let test_judge_fn_type_multiple_args () =
   let args = [ TypedBind (x, T.Int); TypedBind (y, T.Int) ] in
   let body = FnAp [ Sym plus_var; Sym x; Sym y ] in
   let return_type = T.Int in
-  let checker = judge_fn_type args (body, return_type) in
+  let checker = judge_fn_type args return_type body in
   assert_type_ok (T.Arrow (T.Int, T.Arrow (T.Int, T.Int))) checker
 
 
@@ -102,25 +102,25 @@ let test_judge_fnap_type_addition () =
   assert_type_ok T.Int checker
 
 
-(** judge_fnap_result_type のテスト *)
-let test_judge_fnap_result_type_single_arg () =
+(** judge_fnap_return_type のテスト *)
+let test_judge_fnap_return_type_single_arg () =
   let fn_type = T.Arrow (T.Int, T.Int) in
   let args = [ Int 42 ] in
-  let checker = judge_fnap_result_type fn_type args in
+  let checker = judge_fnap_return_type fn_type args in
   assert_type_ok T.Int checker
 
 
-let test_judge_fnap_result_type_multiple_args () =
+let test_judge_fnap_return_type_multiple_args () =
   let fn_type = T.Arrow (T.Int, T.Arrow (T.Int, T.Int)) in
   let args = [ Int 1; Int 2 ] in
-  let checker = judge_fnap_result_type fn_type args in
+  let checker = judge_fnap_return_type fn_type args in
   assert_type_ok T.Int checker
 
 
-let test_judge_fnap_result_type_no_args () =
+let test_judge_fnap_return_type_no_args () =
   let fn_type = T.Int in
   let args = [] in
-  let checker = judge_fnap_result_type fn_type args in
+  let checker = judge_fnap_return_type fn_type args in
   assert_type_ok T.Int checker
 
 
@@ -229,10 +229,10 @@ let () =
         ; test_case "single expression" `Quick test_judge_fnap_type_single
         ; test_case "addition" `Quick test_judge_fnap_type_addition
         ] )
-    ; ( "judge_fnap_result_type"
-      , [ test_case "single argument" `Quick test_judge_fnap_result_type_single_arg
-        ; test_case "multiple arguments" `Quick test_judge_fnap_result_type_multiple_args
-        ; test_case "no arguments" `Quick test_judge_fnap_result_type_no_args
+    ; ( "judge_fnap_return_type"
+      , [ test_case "single argument" `Quick test_judge_fnap_return_type_single_arg
+        ; test_case "multiple arguments" `Quick test_judge_fnap_return_type_multiple_args
+        ; test_case "no arguments" `Quick test_judge_fnap_return_type_no_args
         ] )
     ; ( "judge_let_type"
       , [ test_case "single binding" `Quick test_judge_let_type_single_binding

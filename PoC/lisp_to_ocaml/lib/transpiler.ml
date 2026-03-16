@@ -159,8 +159,8 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
     Exp.match_ value_exp ocaml_cases
 
 
-and fn_args_to_params (matching_patts : matching_patt list) : function_param list =
-  match matching_patts with
+and fn_args_to_params (patts : patt list) : function_param list =
+  match patts with
   | [] ->
     (* 引数なし: fun () -> body のためのunitパラメータを作成 *)
     [ { pparam_loc = Location.none
@@ -175,7 +175,7 @@ and fn_args_to_params (matching_patts : matching_patt list) : function_param lis
          { pparam_loc = Location.none
          ; pparam_desc = Pparam_val (Nolabel, None, to_ocaml_pat patt)
          })
-      matching_patts
+      patts
 
 
 (** リスト式をOCamlのリスト構築式に変換する *)
@@ -190,8 +190,8 @@ and to_list_exp (elements : lisp_expr list) : expression =
       (Some (Exp.tuple [ None, hd_exp; None, tl_exp ]))
 
 
-(** matching_pattをOCamlのパターンに変換する *)
-and to_ocaml_pat (p : matching_patt) : pattern =
+(** pattをOCamlのパターンに変換する *)
+and to_ocaml_pat (p : patt) : pattern =
   match p with
   | Bind var -> to_variable_pat var
   | TypedBind (name, ty) -> to_typed_variable_pat name ty
@@ -218,7 +218,7 @@ and to_ocaml_pat (p : matching_patt) : pattern =
 
 
 (** リストパターンをOCamlのリストパターンに変換する *)
-and to_list_pat (patterns : matching_patt list) : pattern =
+and to_list_pat (patterns : patt list) : pattern =
   match patterns with
   | [] -> to_empty_list_pat ()
   | hd :: tl ->
@@ -241,15 +241,15 @@ and to_match_case (case : matching_case) : case =
 and binding_to_value_binding (b : binding) : value_binding * rec_flag =
   let pat, expr = b in
   match pat with
-  | Val matching_patt ->
-    let rec_flag = binding_to_rec_flag matching_patt expr in
+  | Val patt ->
+    let rec_flag = binding_to_rec_flag patt expr in
     let val_exp = to_ocaml_exp expr in
-    Vb.mk (to_ocaml_pat matching_patt) val_exp, rec_flag
+    Vb.mk (to_ocaml_pat patt) val_exp, rec_flag
   | Func (name, args, return_type) ->
     binding_to_value_binding (Val (Bind name), Fn (args, return_type, expr))
 
 
-and binding_to_rec_flag (patt : matching_patt) (expr : lisp_expr) : rec_flag =
+and binding_to_rec_flag (patt : patt) (expr : lisp_expr) : rec_flag =
   match patt with
   | TypedBind (name, _) -> judge_rec name expr
   | Bind name -> judge_rec name expr

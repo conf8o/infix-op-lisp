@@ -17,7 +17,6 @@ type type_check_error =
   | NotImplemented of string
 
 type lisp_type_env = (var * lisp_type) list
-
 type 'a type_check_result = ('a, type_check_error) Validation.validation
 
 (** Reader + Validation モナドとしての型検査器。型環境(lisp_type_env)文脈の関数を適用するための操作を提供する  *)
@@ -98,7 +97,7 @@ let rec judge_type (expr : lisp) : lisp_type type_checker =
   | Expr (Int _) -> succeed Int
   | Expr (Bool _) -> succeed Bool
   | Expr (Sym name) -> judge_name_type name
-  | Expr (Fn (args, return_type, body)) -> judge_fn_type args (body, return_type)
+  | Expr (Fn (args, return_type, body)) -> judge_fn_type args return_type body
   | Expr (FnAp items) -> judge_fnap_type items
   | Expr (Let (bindings, body)) -> judge_let_type bindings body
   | Expr (If (pred, then_expr, else_expr)) -> judge_if_type pred then_expr else_expr
@@ -107,21 +106,22 @@ let rec judge_type (expr : lisp) : lisp_type type_checker =
   | _ -> fail [ NotImplemented "" ]
 
 
-and judge_fn_type (args : matching_patt list) ((body, ty) : lisp_expr * lisp_type)
+and judge_fn_type (args : patt list) (fn_return_type : lisp_type) (body : lisp_expr)
   : lisp_type type_checker
   =
   let append_arg_types env =
     List.fold_right (fun p acc -> extend_env_with_pattern p acc) args env
   in
-  let* body_type = local append_arg_types (judge_type (Expr body)) in
-  if type_eq body_type ty then
-    let* arg_types = sequence (List.map judge_match_patt_type args) in
-    let fn_type =
-      List.fold_right (fun arg_type acc -> Arrow (arg_type, acc)) arg_types ty
-    in
-    succeed fn_type
+  let* arg_types = sequence (List.map judge_match_patt_type args)
+  and+ body_type = local append_arg_types (judge_type (Expr body)) in
+  if type_eq body_type fn_return_type then
+    succeed
+      (List.fold_right
+         (fun arg_type acc -> Arrow (arg_type, acc))
+         arg_types
+         fn_return_type)
   else
-    fail [ TypeMismatch (body_type, ty) ]
+    fail [ TypeMismatch (body_type, fn_return_type) ]
 
 
 and judge_fnap_type (items : lisp_expr list) : lisp_type type_checker =
@@ -130,10 +130,10 @@ and judge_fnap_type (items : lisp_expr list) : lisp_type type_checker =
   | [ single ] -> judge_type (Expr single)
   | fn :: args ->
     let* fn_type = judge_type (Expr fn) in
-    judge_fnap_result_type fn_type args
+    judge_fnap_return_type fn_type args
 
 
-and judge_fnap_result_type (fn_type : lisp_type) (args : lisp_expr list)
+and judge_fnap_return_type (fn_type : lisp_type) (args : lisp_expr list)
   : lisp_type type_checker
   =
   match args with
@@ -144,14 +144,14 @@ and judge_fnap_result_type (fn_type : lisp_type) (args : lisp_expr list)
        let* actual_arg_type = judge_type (Expr arg) in
        if type_eq actual_arg_type dom then (
          match codom with
-         | Arrow _ -> judge_fnap_result_type codom rest
+         | Arrow _ -> judge_fnap_return_type codom rest
          | ty -> succeed ty
        ) else
          fail [ TypeMismatch (dom, actual_arg_type) ]
      | _ -> fail [ NotAFunction fn_type ])
 
 
-and judge_let_type (bindings : bindings) (body : lisp_expr) : lisp_type type_checker =
+and judge_let_type (bindings : binding list) (body : lisp_expr) : lisp_type type_checker =
   bindings
   |> List.fold_left
        (fun acc_checker (binding_patt, expr) ->
@@ -164,7 +164,7 @@ and judge_let_type (bindings : bindings) (body : lisp_expr) : lisp_type type_che
             else
               fail [ TypeMismatch (expected_type, expr_type) ]
           | Func (name, args, return_type) ->
-            let* lamb_type = judge_fn_type args (expr, return_type) in
+            let* lamb_type = judge_fn_type args return_type expr in
             local (extend name lamb_type) acc_checker)
        (judge_type (Expr body))
 
@@ -205,10 +205,10 @@ and judge_match_type (value : lisp_expr) (cases : matching_case list)
   match cases with
   | [] -> fail [ EmptyMatch ]
   | (patt, expr) :: rest ->
-    let* patt_type = judge_match_patt_type patt in
-    let* value_type = judge_type (Expr value) in
+    let* value_type = judge_type (Expr value)
+    and+ patt_type = judge_match_patt_type patt in
     let* _ =
-      if type_eq patt_type value_type then
+      if type_eq value_type patt_type then
         succeed ()
       else
         fail [ TypeMismatch (patt_type, value_type) ]
@@ -225,7 +225,7 @@ and judge_match_type (value : lisp_expr) (cases : matching_case list)
       BranchTypeMismatch (ty, seq_types))
 
 
-and judge_match_patt_type (patt : matching_patt) : lisp_type type_checker =
+and judge_match_patt_type (patt : patt) : lisp_type type_checker =
   match patt with
   | Bind _ -> succeed Inferred
   | TypedBind (_, ty) -> succeed ty
@@ -234,8 +234,8 @@ and judge_match_patt_type (patt : matching_patt) : lisp_type type_checker =
   | Wildcard -> succeed Inferred
   | List [] -> succeed (List Inferred)
   | List (hd :: tl) ->
-    let* hd_type = judge_match_patt_type hd in
-    let* elem_types = sequence (List.map judge_match_patt_type tl) in
+    let* hd_type = judge_match_patt_type hd
+    and+ elem_types = sequence (List.map judge_match_patt_type tl) in
     if List.for_all (type_eq hd_type) elem_types then
       succeed (List hd_type)
     else
@@ -244,8 +244,8 @@ and judge_match_patt_type (patt : matching_patt) : lisp_type type_checker =
     let+ hd_type = judge_match_patt_type hd_patt in
     List hd_type
   | Cons (hd_patt, tl_patt) ->
-    let* hd_type = judge_match_patt_type hd_patt in
-    let* tl_type = judge_match_patt_type tl_patt in
+    let* hd_type = judge_match_patt_type hd_patt
+    and+ tl_type = judge_match_patt_type tl_patt in
     (match tl_type with
      | List elem_type ->
        if type_eq hd_type elem_type then
@@ -268,7 +268,7 @@ and judge_common_type
     fail [ error (expected_type, seq_types) ]
 
 
-and extend_env_with_pattern (patt : matching_patt) (env : lisp_type_env) : lisp_type_env =
+and extend_env_with_pattern (patt : patt) (env : lisp_type_env) : lisp_type_env =
   match patt with
   | Bind var -> extend var Inferred env
   | TypedBind (var, ty) -> extend var ty env
@@ -276,6 +276,7 @@ and extend_env_with_pattern (patt : matching_patt) (env : lisp_type_env) : lisp_
   | List patts -> List.fold_right (fun p acc -> extend_env_with_pattern p acc) patts env
   | Cons (hd_patt, tl_patt) ->
     extend_env_with_pattern hd_patt env |> extend_env_with_pattern tl_patt
+
 
 (* ================================ *)
 (* その他の補助関数 *)
