@@ -120,10 +120,12 @@ let rec judge_type (expr : lisp) : lisp_type type_checker =
   | _ -> fail [ NotImplemented "" ]
 
 
-and judge_fn_type (args : bound_var list) ((body, ty) : lisp_expr * lisp_type)
+and judge_fn_type (args : matching_patt list) ((body, ty) : lisp_expr * lisp_type)
   : lisp_type type_checker
   =
-  let append_arg_types env = args @ env in
+  let append_arg_types env = 
+    List.fold_right (fun p acc -> extend_env_with_pattern p acc) args env
+  in
   let* body_type = local append_arg_types (judge_type (Expr body)) in
   if body_type = ty then (
     let fn_type =
@@ -206,30 +208,50 @@ and judge_list_type (elements : lisp_expr list) : lisp_type type_checker =
   | hd :: tl ->
     let* hd_type = judge_type (Expr hd) in
     let rest_checkers = List.map (fun tl_expr -> judge_type (Expr tl_expr)) tl in
-    judge_sequence_type rest_checkers hd_type (fun (ty, seq_types) ->
+    judge_common_type rest_checkers hd_type (fun (ty, seq_types) ->
       ListElementTypeMismatch (ty, seq_types))
 
 
-and judge_match_type (value : lisp_expr) (cases : matching_case list)
-  : lisp_type type_checker
-  =
-  let* value_type = judge_type (Expr value) in
+and judge_match_type (value : lisp_expr) (cases : matching_case list) : lisp_type type_checker =
   match cases with
   | [] -> fail [ EmptyMatch ]
   | (patt, expr) :: rest ->
-    let* first_type =
-      local (extend_env_with_pattern patt value_type) (judge_type (Expr expr))
+    let* patt_type = judge_match_patt_type patt in
+    let* value_type = judge_type (Expr value) in
+    let* _ = if patt_type = value_type then succeed () else fail [ TypeMismatch (patt_type, value_type) ] in
+    let* first_expr_type =
+      local (extend_env_with_pattern patt) (judge_type (Expr expr))
     in
     let rest_checkers =
       rest
       |> List.map (fun (patt', expr') ->
-        local (extend_env_with_pattern patt' value_type) (judge_type (Expr expr')))
+        local (extend_env_with_pattern patt') (judge_type (Expr expr')))
     in
-    judge_sequence_type rest_checkers first_type (fun (ty, seq_types) ->
+    judge_common_type rest_checkers first_expr_type (fun (ty, seq_types) ->
       BranchTypeMismatch (ty, seq_types))
 
+and judge_match_patt_type (patt : matching_patt) : lisp_type type_checker =
+  match patt with
+  | Bind (_, ty) -> succeed ty
+  | Int _ -> succeed Int
+  | Bool _ -> succeed Bool
+  | Wildcard -> succeed Abbr
+  | List [] -> succeed  (List Abbr)
+  | List (hd :: tl) ->
+    let* hd_type = judge_match_patt_type hd in
+    let elem_checkers = List.map judge_match_patt_type tl in
+    let+ elem_type = judge_common_type elem_checkers hd_type (fun (ty, seq_types) -> ListElementTypeMismatch (ty, seq_types)) in
+    List elem_type
+  | Cons (hd_patt, tl_patt) ->
+    let* hd_type = judge_match_patt_type hd_patt in
+    let* tl_type = judge_match_patt_type tl_patt in
+    if tl_type = List hd_type then
+      succeed (List hd_type)
+    else
+      fail [ListElementTypeMismatch (List hd_type, [ tl_type ]) ]
 
-and judge_sequence_type
+
+and judge_common_type
       (checker_seq : lisp_type type_checker list)
       (expected_type : lisp_type)
       (error : lisp_type * lisp_type list -> type_check_error)
@@ -242,18 +264,12 @@ and judge_sequence_type
     fail [ error (expected_type, seq_types) ]
 
 
-and extend_env_with_pattern
-      (patt : matching_patt)
-      (value_type : lisp_type)
-      (env : lisp_type_env)
-  : lisp_type_env
-  =
-  match patt, value_type with
-  | Bind var, ty -> extend var ty env
-  | (Int _ | Bool _ | Wildcard), _ -> env
-  | List patts, List elem_ty ->
-    List.fold_right (fun p acc -> extend_env_with_pattern p elem_ty acc) patts env
-  | Cons (hd_patt, tl_patt), List elem_ty ->
-    extend_env_with_pattern hd_patt elem_ty env
-    |> extend_env_with_pattern tl_patt value_type
-  | (List _ | Cons _), _ -> env
+and extend_env_with_pattern (patt : matching_patt) (env : lisp_type_env) : lisp_type_env =
+  match patt with
+  | Bind (var, ty) -> extend var ty env
+  | (Int _ | Bool _ | Wildcard) -> env
+  | List patts ->
+    List.fold_right (fun p acc -> extend_env_with_pattern p acc) patts env
+  | Cons (hd_patt, tl_patt) ->
+    extend_env_with_pattern hd_patt env
+    |> extend_env_with_pattern tl_patt
