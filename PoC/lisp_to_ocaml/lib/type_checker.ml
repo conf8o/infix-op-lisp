@@ -18,19 +18,6 @@ type type_check_error =
 
 type lisp_type_env = (var * lisp_type) list
 
-let init_type_env () : lisp_type_env =
-  [ top_var "+", Arrow (Int, Arrow (Int, Int))
-  ; top_var "-", Arrow (Int, Arrow (Int, Int))
-  ; top_var "*", Arrow (Int, Arrow (Int, Int))
-  ; top_var "<", Arrow (Int, Arrow (Int, Bool))
-  ; top_var ">", Arrow (Int, Arrow (Int, Bool))
-  ; top_var "=", Arrow (Int, Arrow (Int, Bool))
-  ; top_var "<=", Arrow (Int, Arrow (Int, Bool))
-  ; top_var ">=", Arrow (Int, Arrow (Int, Bool))
-  ; top_var "::", Arrow (Var "T", Arrow (List (Var "T"), List (Var "T")))
-  ]
-
-
 type 'a type_check_result = ('a, type_check_error) Validation.validation
 
 (** Reader + Validation モナドとしての型検査器。型環境(lisp_type_env)文脈の関数を適用するための操作を提供する  *)
@@ -289,3 +276,19 @@ and extend_env_with_pattern (patt : matching_patt) (env : lisp_type_env) : lisp_
   | List patts -> List.fold_right (fun p acc -> extend_env_with_pattern p acc) patts env
   | Cons (hd_patt, tl_patt) ->
     extend_env_with_pattern hd_patt env |> extend_env_with_pattern tl_patt
+
+(* ================================ *)
+(* その他の補助関数 *)
+(* ================================ *)
+
+let init_type_env () : lisp_type_env =
+  [ top_var "+", Arrow (Int, Arrow (Int, Int))
+  ; top_var "-", Arrow (Int, Arrow (Int, Int))
+  ; top_var "*", Arrow (Int, Arrow (Int, Int))
+  ; top_var "<", Arrow (Int, Arrow (Int, Bool))
+  ; top_var ">", Arrow (Int, Arrow (Int, Bool))
+  ; top_var "=", Arrow (Int, Arrow (Int, Bool))
+  ; top_var "<=", Arrow (Int, Arrow (Int, Bool))
+  ; top_var ">=", Arrow (Int, Arrow (Int, Bool))
+  ; top_var "::", Arrow (Var "T", Arrow (List (Var "T"), List (Var "T")))
+  ]
