@@ -180,23 +180,6 @@ and judge_let_type (bindings : bindings) (body : lisp_expr) : lisp_type type_che
             let* lamb_type = judge_fn_type args (expr, return_type) in
             local (extend name lamb_type) acc_checker)
        (judge_type (Expr body))
-(* let rec process_bindings bindings' =
-    match bindings' with
-    | [] -> judge_type (Expr body)
-    | (binding_patt, expr) :: rest ->
-      let* expr_type = judge_type (Expr expr) in
-      (match binding_patt with
-       | Val matching ->
-         let* expected_type = judge_match_patt_type matching in
-         if expr_type = expected_type then
-           local (extend_env_with_pattern matching) (process_bindings rest)
-         else
-           fail [ TypeMismatch (expected_type, expr_type) ]
-       | Func (name, args, return_type) ->
-         let* lamb_type = judge_fn_type args (expr, return_type) in
-         local (extend name lamb_type) (process_bindings rest))
-  in
-  process_bindings bindings *)
 
 
 and judge_if_type (pred : lisp_expr) (then_expr : lisp_expr) (else_expr : lisp_expr)
