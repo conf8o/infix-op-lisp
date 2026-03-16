@@ -59,7 +59,9 @@ let test_int () =
 (** 真偽値の定義のテスト *)
 let test_bool () =
   scope_counter := 0;
-  let program = [ Decl (Def (Val (TypedBind (v "flag", Lisp_type.Inferred)), Bool true)) ] in
+  let program =
+    [ Decl (Def (Val (TypedBind (v "flag", Lisp_type.Inferred)), Bool true)) ]
+  in
   let expected_file = "expected/bool.ml" in
   test_transpile_from_file "bool definition" program expected_file ()
 
@@ -68,7 +70,10 @@ let test_bool () =
 let test_list () =
   scope_counter := 0;
   let program =
-    [ Decl (Def (Val (TypedBind (v "nums", Lisp_type.(List Int))), List [ Int 1; Int 2; Int 3 ])) ]
+    [ Decl
+        (Def
+           (Val (TypedBind (v "nums", Lisp_type.(List Int))), List [ Int 1; Int 2; Int 3 ]))
+    ]
   in
   let expected_file = "expected/list.ml" in
   test_transpile_from_file "list definition" program expected_file ()
@@ -83,7 +88,10 @@ let test_function () =
   let program =
     [ Decl
         (Def
-           ( Func (add, [ TypedBind (x, Lisp_type.Int); TypedBind (y, Lisp_type.Int) ], Lisp_type.Int)
+           ( Func
+               ( add
+               , [ TypedBind (x, Lisp_type.Int); TypedBind (y, Lisp_type.Int) ]
+               , Lisp_type.Int )
            , FnAp [ Sym (v0 "+"); Sym x; Sym y ] ))
     ]
   in
@@ -132,15 +140,16 @@ let test_let () =
         (Def
            ( Func (calc1, [], Lisp_type.Int)
            , Let
-               ([ Val (TypedBind (x1, Lisp_type.Int)), Int 10 ], FnAp [ Sym (v0 "+"); Sym x1; Int 5 ])
-           ))
+               ( [ Val (TypedBind (x1, Lisp_type.Int)), Int 10 ]
+               , FnAp [ Sym (v0 "+"); Sym x1; Int 5 ] ) ))
     ; (* ネストlet *)
       Decl
         (Def
            ( Func (calc2, [], Lisp_type.Int)
            , Let
                ( [ Val (TypedBind (x2, Lisp_type.Int)), Int 10
-                 ; Val (TypedBind (y2, Lisp_type.Int)), FnAp [ Sym (v0 "+"); Sym x2; Int 5 ]
+                 ; ( Val (TypedBind (y2, Lisp_type.Int))
+                   , FnAp [ Sym (v0 "+"); Sym x2; Int 5 ] )
                  ]
                , FnAp [ Sym (v0 "+"); Sym x2; Sym y2 ] ) ))
     ; (* 複数束縛let *)
@@ -188,7 +197,8 @@ let test_match () =
   let program =
     [ Decl
         (Def
-           ( Func (list_sum, [ TypedBind (lst, Lisp_type.List Lisp_type.Int) ], Lisp_type.Int)
+           ( Func
+               (list_sum, [ TypedBind (lst, Lisp_type.List Lisp_type.Int) ], Lisp_type.Int)
            , Match
                ( Sym lst
                , [ List [], Int 0

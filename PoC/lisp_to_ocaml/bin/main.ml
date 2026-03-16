@@ -73,8 +73,7 @@ let () =
                  ] ) ))
     ; Decl
         (Def
-           ( Func
-               (v "quicksort", [ Bind (v "lst5") ], Lisp_type.(List Int))
+           ( Func (v "quicksort", [ Bind (v "lst5") ], Lisp_type.(List Int))
            , Match
                ( Sym (v "lst5")
                , [ List [], List []
@@ -116,9 +115,7 @@ let () =
            ( Val (Bind (v "unsorted"))
            , List [ Int 3; Int 1; Int 4; Int 1; Int 5; Int 9; Int 2; Int 6 ] ))
     ; Decl
-        (Def
-           ( Val (Bind (v "sorted"))
-           , FnAp [ Sym (v "quicksort"); Sym (v "unsorted") ] ))
+        (Def (Val (Bind (v "sorted")), FnAp [ Sym (v "quicksort"); Sym (v "unsorted") ]))
     ]
   in
   let structures = List.concat_map to_structure program in

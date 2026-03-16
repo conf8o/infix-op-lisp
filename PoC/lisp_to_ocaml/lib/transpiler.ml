@@ -125,7 +125,8 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
   | Fn (args, ty, body) ->
     let params = fn_args_to_params args in
     let body_exp = to_ocaml_exp body in
-    let type_constraint = match ty with
+    let type_constraint =
+      match ty with
       | Inferred -> None
       | _ -> Some (Pconstraint (lisp_type_to_core_type ty))
     in
@@ -247,11 +248,13 @@ and binding_to_value_binding (b : binding) : value_binding * rec_flag =
   | Func (name, args, return_type) ->
     binding_to_value_binding (Val (Bind name), Fn (args, return_type, expr))
 
-and binding_to_rec_flag (patt : matching_patt) (expr : lisp_expr) :  rec_flag =
+
+and binding_to_rec_flag (patt : matching_patt) (expr : lisp_expr) : rec_flag =
   match patt with
-  | (TypedBind (name, _)) -> judge_rec name expr
-  | (Bind name) -> judge_rec name expr
+  | TypedBind (name, _) -> judge_rec name expr
+  | Bind name -> judge_rec name expr
   | _ -> Nonrecursive
+
 
 (* ================================ *)
 (* テストコード *)
@@ -261,7 +264,6 @@ and binding_to_rec_flag (patt : matching_patt) (expr : lisp_expr) :  rec_flag =
 (* ================================ *)
 (* OCaml parsetree への変換のエントリポイント *)
 (* ================================ *)
-
 
 (** LispのASTをOCamlのParsetree構造に変換する *)
 let to_structure (e : lisp) : structure =

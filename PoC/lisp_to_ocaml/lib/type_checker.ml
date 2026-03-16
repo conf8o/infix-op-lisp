@@ -237,12 +237,15 @@ and judge_match_type (value : lisp_expr) (cases : matching_case list)
     judge_common_type rest_checkers first_expr_type (fun (ty, seq_types) ->
       BranchTypeMismatch (ty, seq_types))
 
+
 and judge_match_patt_type (patt : matching_patt) : lisp_type type_checker =
-  let check_result = 
-    match (match_patt_to_type patt) with
+  let check_result =
+    match match_patt_to_type patt with
     | Ok patt_type -> Validation.succeed patt_type
-    | Error (hd :: tl) -> Validation.fail [ListElementTypeMismatch (hd, tl)]
-    | Error [] -> Validation.fail [NotImplemented "unexpected errror: empty error list in match_patt_to_type"]
+    | Error (hd :: tl) -> Validation.fail [ ListElementTypeMismatch (hd, tl) ]
+    | Error [] ->
+      Validation.fail
+        [ NotImplemented "unexpected errror: empty error list in match_patt_to_type" ]
   in
   from_result check_result
 

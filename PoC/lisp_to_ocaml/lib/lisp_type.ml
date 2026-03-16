@@ -21,6 +21,7 @@ let rec type_eq ty1 ty2 =
   | Inferred, _ | _, Inferred -> true
   | _ -> false
 
+
 let rec to_string = function
   | Int -> "int"
   | Bool -> "bool"

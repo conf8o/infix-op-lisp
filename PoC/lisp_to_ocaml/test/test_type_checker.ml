@@ -139,7 +139,9 @@ let test_judge_let_type_multiple_bindings () =
   let x = v "x" in
   let y = v "y" in
   let plus_var = top_var "+" in
-  let bindings = [ Val (TypedBind (x, T.Int)), Int 10; Val (TypedBind (y, T.Int)), Int 20 ] in
+  let bindings =
+    [ Val (TypedBind (x, T.Int)), Int 10; Val (TypedBind (y, T.Int)), Int 20 ]
+  in
   let body = FnAp [ Sym plus_var; Sym x; Sym y ] in
   let checker = judge_let_type bindings body in
   assert_type_ok T.Int checker

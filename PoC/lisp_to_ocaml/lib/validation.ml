@@ -35,10 +35,10 @@ let product v1 v2 = lift2 (fun x y -> x, y) v1 v2
 
 let sequence (results : ('a, 'b) validation list) : ('a list, 'b) validation =
   List.fold_right
-    (fun r acc ->
-       product r acc |> map (fun (r0, r1) -> r0 :: r1))
+    (fun r acc -> product r acc |> map (fun (r0, r1) -> r0 :: r1))
     results
     (Success [])
+
 
 module Syntax = struct
   let ( let* ) = ( >>= )

@@ -75,7 +75,7 @@ let rec contains_rec_call (name : var) (expr : lisp_expr) : bool =
 
 let rec match_patt_to_type (patt : matching_patt) : (lisp_type, lisp_type list) result =
   match patt with
-  | Bind _ -> Ok (Lisp_type.Inferred)
+  | Bind _ -> Ok Lisp_type.Inferred
   | TypedBind (_, ty) -> Ok ty
   | Int _ -> Ok Lisp_type.Int
   | Bool _ -> Ok Lisp_type.Bool
@@ -92,16 +92,15 @@ let rec match_patt_to_type (patt : matching_patt) : (lisp_type, lisp_type list) 
     else
       Error elem_types
   | Cons (hd_patt, List []) ->
-    match_patt_to_type hd_patt
-    |> Result.map (fun hd_type -> Lisp_type.(List hd_type))
+    match_patt_to_type hd_patt |> Result.map (fun hd_type -> Lisp_type.(List hd_type))
   | Cons (hd_patt, tl_patt) ->
     let open Result.Syntax in
     let* hd_type = match_patt_to_type hd_patt in
-    match match_patt_to_type tl_patt with
-    | Ok (Lisp_type.List elem_type) ->
-      if type_eq hd_type elem_type then
-        Ok (Lisp_type.(List hd_type))
-      else
-        Error [ hd_type; elem_type ]
-    | Ok other_type -> Error [ hd_type; other_type ]
-    | Error tl_types -> Error (hd_type :: tl_types)
+    (match match_patt_to_type tl_patt with
+     | Ok (Lisp_type.List elem_type) ->
+       if type_eq hd_type elem_type then
+         Ok Lisp_type.(List hd_type)
+       else
+         Error [ hd_type; elem_type ]
+     | Ok other_type -> Error [ hd_type; other_type ]
+     | Error tl_types -> Error (hd_type :: tl_types))
