@@ -22,7 +22,7 @@ let int_patt n = Int n
 let bool_patt b = Bool b
 let list_patt patts = List patts
 let cons_patt hd tl = Cons (hd, tl)
-let wildcard_patt () = Wildcard  
+let wildcard_patt () = Wildcard
 
 type binding_patt =
   | Val of patt
