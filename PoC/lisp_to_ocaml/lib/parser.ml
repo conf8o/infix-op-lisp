@@ -138,7 +138,7 @@ let letter : char parser =
 
 let operator_char : char parser =
   satisfy (fun c ->
-    c = '+' || c = '-' || c = '*' || c = '/' || c = '=' || c = '<' || c = '>')
+    c = '+' || c = '-' || c = '*' || c = '/' || c = '=' || c = '<' || c = '>' || c = '&' || c = '|' || c = '%' || c = '^' || c = ':')
 
 
 let identifier_char : char parser =
@@ -239,9 +239,11 @@ and parse_simple_bind () : patt parser =
 
 
 and parse_typed_bind () : patt parser =
+  let* _ = lexeme (char '(') in
   let* name = lexeme identifier in
   let* _ = lexeme (char ':') in
   let* ty = parse_type () in
+  let* _ = lexeme (char ')') in
   return (TypedBind (top_var name, ty))
 
 
@@ -474,7 +476,7 @@ let parse_lisp () : lisp parser =
      return (Expr expr))
 
 
-let parse (input : string) : lisp =
-  match parse_lisp () input with
+let parse (input : string) : lisp list =
+  match many (parse_lisp ()) input with
   | Success (result, _) -> result
   | Failure (msg, _) -> failwith ("Parse error: " ^ msg)

@@ -1,15 +1,15 @@
-let rec filter (pred : int -> bool) (lst1 : int list) : int list=
-  match lst1 with
+let rec filter pred lst =
+  match lst with
   | [] -> []
-  | x2::xs2 -> if pred x2 then x2 :: (filter pred xs2) else filter pred xs2
-let rec append (lst1_3 : int list) (lst2_3 : int list) : int list=
-  match lst1_3 with | [] -> lst2_3 | x4::xs4 -> x4 :: (append xs4 lst2_3)
-let rec quicksort lst5 : int list=
-  match lst5 with
+  | x::xs -> if pred x then x :: (filter pred xs) else filter pred xs
+let rec append lst1 lst2 =
+  match lst1 with | [] -> lst2 | x::xs -> x :: (append xs lst2)
+let rec quicksort lst =
+  match lst with
   | [] -> []
   | pivot::rest ->
-      let smaller = filter (fun x7 -> x7 < pivot) rest in
-      let greater = filter (fun x8 -> x8 >= pivot) rest in
-      append (append (quicksort smaller) [pivot]) (quicksort greater)
+      let smaller = filter (fun x -> x < pivot) rest in
+      let greater = filter (fun x -> x >= pivot) rest in
+      append (append (quicksort smaller) (pivot :: [])) (quicksort greater)
 let unsorted = [3; 1; 4; 1; 5; 9; 2; 6]
 let sorted = quicksort unsorted
