@@ -44,30 +44,29 @@ type lisp =
 (* 再帰呼び出しに関する補助関数 *)
 (* ================================ *)
 
-(** nameに対してexpr内で再帰呼び出しが現れるかを判断する。
+(** 変数に対してexpr内で再帰呼び出しが現れるかを判断する。
   このLispにおいては、recフラグは設けず自動検知する方針としている。
-  変数のシャドーイングについては、新たな変数が現れるたびに識別子を付与して一意な変数を作り出す仕組みとするので考慮しない。
 *)
-let rec contains_rec_call (name : var) (expr : lisp_expr) : bool =
+let rec contains_rec_call (var : var) (expr : lisp_expr) : bool =
   match expr with
   | Int _ | Bool _ -> false
-  | Sym v -> v = name
-  | Fn (_, _, body) -> contains_rec_call name body
-  | FnAp items -> List.exists (contains_rec_call name) items
+  | Sym v -> v = var
+  | Fn (_, _, body) -> contains_rec_call var body
+  | FnAp items -> List.exists (contains_rec_call var) items
   | Let (bindings, body) ->
     let rec_in_bindings =
       List.fold_left
-        (fun has_rec (_, expr) -> has_rec || contains_rec_call name expr)
+        (fun has_rec (_, expr) -> has_rec || contains_rec_call var expr)
         false
         bindings
     in
-    rec_in_bindings || contains_rec_call name body
+    rec_in_bindings || contains_rec_call var body
   | If (pred, then_expr, else_expr) ->
-    contains_rec_call name pred
-    || contains_rec_call name then_expr
-    || contains_rec_call name else_expr
-  | List elements -> List.exists (contains_rec_call name) elements
+    contains_rec_call var pred
+    || contains_rec_call var then_expr
+    || contains_rec_call var else_expr
+  | List elements -> List.exists (contains_rec_call var) elements
   | Match (value, cases) ->
-    let in_value = contains_rec_call name value in
-    let in_cases = List.exists (fun (_, expr) -> contains_rec_call name expr) cases in
+    let in_value = contains_rec_call var value in
+    let in_cases = List.exists (fun (_, expr) -> contains_rec_call var expr) cases in
     in_value || in_cases

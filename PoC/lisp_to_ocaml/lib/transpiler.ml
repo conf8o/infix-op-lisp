@@ -17,12 +17,37 @@ open Lisp_type
 *)
 
 (* ================================ *)
+(* 型に関する補助関数 *)
+(* ================================ *)
+
+(** Lispのlisp_typeをOCamlのcore_typeに変換する *)
+let rec lisp_type_to_core_type (t : lisp_type) : core_type =
+  match t with
+  | Int -> Typ.constr { txt = Lident "int"; loc = Location.none } []
+  | Bool -> Typ.constr { txt = Lident "bool"; loc = Location.none } []
+  | Unit -> Typ.constr { txt = Lident "unit"; loc = Location.none } []
+  | List elem_type ->
+    let elem_core_type = lisp_type_to_core_type elem_type in
+    Typ.constr { txt = Lident "list"; loc = Location.none } [ elem_core_type ]
+  | Arrow (arg_type, ret_type) ->
+    Typ.arrow Nolabel (lisp_type_to_core_type arg_type) (lisp_type_to_core_type ret_type)
+  | Var type_var -> Typ.var type_var
+  | Inferred -> Typ.any ()
+
+
+(* ================================ *)
 (* 式に関する補助関数 *)
 (* ================================ *)
 
+(** OCamlの変数名を作成する補助関数 *)
+let to_name_with_scope_id (v : var) : string =
+  let name, id = v in
+  Printf.sprintf "%s%s" name id
+
+
 (** 識別子式を作成する（例: 変数参照、演算子、関数名） *)
-let to_identifier_exp (name : string) : expression =
-  Exp.ident { txt = Lident name; loc = Location.none }
+let to_identifier_exp (v : var) : expression =
+  Exp.ident { txt = Lident (to_name_with_scope_id v); loc = Location.none }
 
 
 (** 整数定数式を作成する *)
@@ -56,14 +81,9 @@ let to_empty_list_exp () : expression =
 (* パターンマッチングに関する補助関数 *)
 (* ================================ *)
 
-let to_unique_var (v : var) : string =
-  let name, id = v in
-  Printf.sprintf "%s%s" name id
-
-
 (** 変数パターンを作成する *)
 let to_variable_pat (v : var) : pattern =
-  let name = to_unique_var v in
+  let name = to_name_with_scope_id v in
   Pat.var { txt = name; loc = Location.none }
 
 
@@ -74,25 +94,6 @@ let to_empty_list_pat () : pattern =
 
 (** ワイルドカードパターンを作成する: `_` *)
 let to_wildcard_pat () : pattern = Pat.any ()
-
-(* ================================ *)
-(* 型に関する補助関数 *)
-(* ================================ *)
-
-(** Lispのlisp_typeをOCamlのcore_typeに変換する *)
-let rec lisp_type_to_core_type (t : lisp_type) : core_type =
-  match t with
-  | Int -> Typ.constr { txt = Lident "int"; loc = Location.none } []
-  | Bool -> Typ.constr { txt = Lident "bool"; loc = Location.none } []
-  | Unit -> Typ.constr { txt = Lident "unit"; loc = Location.none } []
-  | List elem_type ->
-    let elem_core_type = lisp_type_to_core_type elem_type in
-    Typ.constr { txt = Lident "list"; loc = Location.none } [ elem_core_type ]
-  | Arrow (arg_type, ret_type) ->
-    Typ.arrow Nolabel (lisp_type_to_core_type arg_type) (lisp_type_to_core_type ret_type)
-  | Var type_var -> Typ.var type_var
-  | Inferred -> Typ.any ()
-
 
 (** 型注釈付きの変数パターンを作成する: (x : int)。lisp_type が Inferred の場合は x 型注釈無しのパターン返す。*)
 let to_typed_variable_pat (v : var) (t : lisp_type) : pattern =
@@ -109,8 +110,8 @@ let to_typed_variable_pat (v : var) (t : lisp_type) : pattern =
 (* ================================ *)
 
 (** 変数名が式の中に現れるかを判断し、再帰フラグを返す *)
-let judge_rec (name : var) (expr : lisp_expr) : rec_flag =
-  if contains_rec_call name expr then
+let judge_rec (v : var) (expr : lisp_expr) : rec_flag =
+  if contains_rec_call v expr then
     Recursive
   else
     Nonrecursive
@@ -121,7 +122,7 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
   match e with
   | Int n -> to_constant_int_exp n
   | Bool b -> to_constant_bool_exp b
-  | Sym name -> to_identifier_exp (to_unique_var name)
+  | Sym v -> to_identifier_exp v
   | Fn (args, ty, body) ->
     let params = fn_args_to_params args in
     let body_exp = to_ocaml_exp body in
@@ -193,8 +194,8 @@ and to_list_exp (elements : lisp_expr list) : expression =
 (** pattをOCamlのパターンに変換する *)
 and to_ocaml_pat (p : patt) : pattern =
   match p with
-  | Bind var -> to_variable_pat var
-  | TypedBind (name, ty) -> to_typed_variable_pat name ty
+  | Bind v -> to_variable_pat v
+  | TypedBind (v, ty) -> to_typed_variable_pat v ty
   | Int n -> Pat.constant (Const.int n)
   | Bool b ->
     Pat.construct
@@ -245,22 +246,17 @@ and binding_to_value_binding (b : binding) : value_binding * rec_flag =
     let rec_flag = binding_to_rec_flag patt expr in
     let val_exp = to_ocaml_exp expr in
     Vb.mk (to_ocaml_pat patt) val_exp, rec_flag
-  | Func (name, args, return_type) ->
-    binding_to_value_binding (Val (Bind name), Fn (args, return_type, expr))
+  | Func (var, args, return_type) ->
+    binding_to_value_binding (Val (Bind var), Fn (args, return_type, expr))
 
 
 and binding_to_rec_flag (patt : patt) (expr : lisp_expr) : rec_flag =
   match patt with
-  | TypedBind (name, _) -> judge_rec name expr
-  | Bind name -> judge_rec name expr
+  | TypedBind (var, _) -> judge_rec var expr
+  | Bind var -> judge_rec var expr
   | _ -> Nonrecursive
 
 
-(* ================================ *)
-(* テストコード *)
-(* ================================ *)
-
-(** Let 式で最初の束縛でシャドーイングされ、その後も再帰呼び出しがある場合 *)
 (* ================================ *)
 (* OCaml parsetree への変換のエントリポイント *)
 (* ================================ *)

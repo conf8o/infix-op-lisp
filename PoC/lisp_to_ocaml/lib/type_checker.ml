@@ -79,24 +79,24 @@ let run (TypeChecker check : 'a type_checker) (env : lisp_type_env) : 'a type_ch
 
 open Syntax
 
-let lookup (name : var) (env : lisp_type_env) : lisp_type option = List.assoc_opt name env
+let lookup (var : var) (env : lisp_type_env) : lisp_type option = List.assoc_opt var env
 
-let extend (name : var) (ty : lisp_type) (env : lisp_type_env) : lisp_type_env =
-  (name, ty) :: env
+let extend (var : var) (ty : lisp_type) (env : lisp_type_env) : lisp_type_env =
+  (var, ty) :: env
 
 
-let judge_name_type (name : var) : lisp_type type_checker =
+let judge_variable_type (var : var) : lisp_type type_checker =
   let* env = ask in
-  match lookup name env with
+  match lookup var env with
   | Some ty -> succeed ty
-  | None -> fail [ UnboundVariable name ]
+  | None -> fail [ UnboundVariable var ]
 
 
 let rec judge_type (expr : lisp) : lisp_type type_checker =
   match expr with
   | Expr (Int _) -> succeed Int
   | Expr (Bool _) -> succeed Bool
-  | Expr (Sym name) -> judge_name_type name
+  | Expr (Sym v) -> judge_variable_type v
   | Expr (Fn (args, return_type, body)) -> judge_fn_type args return_type body
   | Expr (FnAp items) -> judge_fnap_type items
   | Expr (Let (bindings, body)) -> judge_let_type bindings body

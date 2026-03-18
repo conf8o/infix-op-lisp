@@ -27,18 +27,18 @@ let assert_type_error checker =
   | Failure _ -> ()
 
 
-(** judge_name_type のテスト *)
-let test_judge_name_type_builtin () =
+(** judge_variable_type のテスト *)
+let test_judge_variable_type_builtin () =
   scope_counter := 0;
   let plus_var = top_var "+" in
-  let checker = judge_name_type plus_var in
+  let checker = judge_variable_type plus_var in
   assert_type_ok (T.Arrow (T.Int, T.Arrow (T.Int, T.Int))) checker
 
 
-let test_judge_name_type_unbound () =
+let test_judge_variable_type_unbound () =
   scope_counter := 0;
   let unknown_var = v "unknown" in
-  let checker = judge_name_type unknown_var in
+  let checker = judge_variable_type unknown_var in
   assert_type_error checker
 
 
@@ -211,9 +211,9 @@ let () =
   let open Alcotest in
   run
     "Type Checker Tests"
-    [ ( "judge_name_type"
-      , [ test_case "builtin operator" `Quick test_judge_name_type_builtin
-        ; test_case "unbound variable" `Quick test_judge_name_type_unbound
+    [ ( "judge_variable_type"
+      , [ test_case "builtin operator" `Quick test_judge_variable_type_builtin
+        ; test_case "unbound variable" `Quick test_judge_variable_type_unbound
         ] )
     ; ( "judge_type"
       , [ test_case "integer literal" `Quick test_judge_type_int
