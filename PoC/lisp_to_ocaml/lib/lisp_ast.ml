@@ -16,6 +16,14 @@ type patt =
   | Cons of patt * patt
   | Wildcard
 
+let bind_patt var = Bind var
+let typed_bind_patt var ty = TypedBind (var, ty)
+let int_patt n = Int n
+let bool_patt b = Bool b
+let list_patt patts = List patts
+let cons_patt hd tl = Cons (hd, tl)
+let wildcard_patt () = Wildcard  
+
 type binding_patt =
   | Val of patt
   | Func of var * patt list * lisp_type

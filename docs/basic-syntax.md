@@ -44,13 +44,6 @@
 ; 無名関数
 (fn (arg1 arg2 ...)
   body)
-
-; 非モナディックな逐次実行
-(begin
-  expr1
-  expr2
-  ...
-  result)
 ```
 
 ## 演算子の中置と連鎖

@@ -40,4 +40,3 @@
 (fn (x y) : Int (+ x y))
 (fn ((x : Int) (y : Int)) : Int (+ x y))
 ```
-
