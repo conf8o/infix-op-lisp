@@ -109,17 +109,14 @@ let rec judge_type (expr : lisp) : lisp_type type_checker =
 and judge_fn_type (args : patt list) (fn_return_type : lisp_type) (body : lisp_expr)
   : lisp_type type_checker
   =
+  let* arg_types = sequence (List.map judge_match_patt_type args) in
   let append_arg_types env =
     List.fold_right (fun p acc -> extend_env_with_pattern p acc) args env
   in
-  let* arg_types = sequence (List.map judge_match_patt_type args)
-  and+ body_type = local append_arg_types (judge_type (Expr body)) in
+  let* body_type = local append_arg_types (judge_type (Expr body)) in
   if type_eq body_type fn_return_type then
-    succeed
-      (List.fold_right
-         (fun arg_type acc -> Arrow (arg_type, acc))
-         arg_types
-         fn_return_type)
+    List.fold_right (fun arg_type acc -> Arrow (arg_type, acc)) arg_types fn_return_type
+    |> succeed
   else
     fail [ TypeMismatch (body_type, fn_return_type) ]
 
