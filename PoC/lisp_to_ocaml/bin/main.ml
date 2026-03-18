@@ -4,7 +4,8 @@ open Lisp_to_ocaml.Transpiler
 let () =
   print_endline "start";
   (* クイックソート *)
-  let program = {|
+  let program =
+    {|
 (def (filter pred lst)
   (match lst
     [] []

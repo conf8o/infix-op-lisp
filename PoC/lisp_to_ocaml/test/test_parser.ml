@@ -243,8 +243,7 @@ let test_parse_multiple_definitions () =
     ; Decl (Def (Val (Bind _), Int 20))
     ; Decl (Def (Func (_, [ Bind _; Bind _ ], T.Inferred), FnAp _))
     ; Decl (Def (Val (Bind _), FnAp _))
-    ] ->
-    Alcotest.(check pass) "parse multiple definitions" () ()
+    ] -> Alcotest.(check pass) "parse multiple definitions" () ()
   | _ -> Alcotest.fail "Expected multiple definitions"
 
 
@@ -300,6 +299,6 @@ let () =
         ; test_case "parse list type" `Quick test_parse_list_type
         ] )
     ; ( "multiple"
-      , [ test_case "parse multiple definitions" `Quick test_parse_multiple_definitions
-        ] )
+      , [ test_case "parse multiple definitions" `Quick test_parse_multiple_definitions ]
+      )
     ]

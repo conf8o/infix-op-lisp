@@ -24,17 +24,21 @@ let fail (msg : error_message) : 'a parser =
   fun _input -> Failure (msg, { line = 0; column = 0 })
 
 
-let bind (p : 'a parser) (f : 'a -> 'b parser) : 'b parser =
+let ( >>= ) (p : 'a parser) (f : 'a -> 'b parser) : 'b parser =
   fun input ->
   match p input with
   | Success (value, rest) -> f value rest
   | Failure (msg, pos) -> Failure (msg, pos)
 
 
-let map (f : 'a -> 'b) (p : 'a parser) : 'b parser = bind p (fun x -> return (f x))
-let ( >>= ) = bind
-let ( let* ) = bind
-let ( let+ ) x f = map f x
+let map (f : 'a -> 'b) (p : 'a parser) : 'b parser = p >>= fun x -> return (f x)
+
+module Syntax = struct
+  let ( let* ) = ( >>= )
+  let ( let+ ) x f = map f x
+end
+
+open Syntax
 
 (* ================================ *)
 (* 基本的なコンビネータ *)
@@ -138,7 +142,18 @@ let letter : char parser =
 
 let operator_char : char parser =
   satisfy (fun c ->
-    c = '+' || c = '-' || c = '*' || c = '/' || c = '=' || c = '<' || c = '>' || c = '&' || c = '|' || c = '%' || c = '^' || c = ':')
+    c = '+'
+    || c = '-'
+    || c = '*'
+    || c = '/'
+    || c = '='
+    || c = '<'
+    || c = '>'
+    || c = '&'
+    || c = '|'
+    || c = '%'
+    || c = '^'
+    || c = ':')
 
 
 let identifier_char : char parser =
