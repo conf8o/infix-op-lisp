@@ -103,10 +103,10 @@ let rec judge_type (expr : lisp) : lisp_type type_checker =
   | Expr (If (pred, then_expr, else_expr)) -> judge_if_type pred then_expr else_expr
   | Expr (List elements) -> judge_list_type elements
   | Expr (Match (value, cases)) -> judge_match_type value cases
-  | _ -> fail [ NotImplemented "" ]
+  | _ -> fail [ NotImplemented "Decl" ]
 
 
-and judge_fn_type (args : patt list) (fn_return_type : lisp_type) (body : lisp_expr)
+and judge_fn_type (args : typed_patt list) (fn_return_type : lisp_type) (body : lisp_expr)
   : lisp_type type_checker
   =
   let* arg_types = sequence (List.map judge_match_patt_type args) in
@@ -222,14 +222,13 @@ and judge_match_type (value : lisp_expr) (cases : matching_case list)
       BranchTypeMismatch (ty, seq_types))
 
 
-and judge_match_patt_type (patt : patt) : lisp_type type_checker =
+and judge_match_patt_type ((patt, ty) : typed_patt) : lisp_type type_checker =
   match patt with
-  | Bind _ -> succeed Inferred
-  | TypedBind (_, ty) -> succeed ty
+  | Bind _ -> succeed ty
   | Int _ -> succeed Int
   | Bool _ -> succeed Bool
-  | Wildcard -> succeed Inferred
-  | List [] -> succeed (List Inferred)
+  | Wildcard -> succeed ty
+  | List [] -> succeed (List ty)
   | List (hd :: tl) ->
     let* hd_type = judge_match_patt_type hd
     and+ elem_types = sequence (List.map judge_match_patt_type tl) in
@@ -237,7 +236,7 @@ and judge_match_patt_type (patt : patt) : lisp_type type_checker =
       succeed (List hd_type)
     else
       fail [ ListElementTypeMismatch (hd_type, elem_types) ]
-  | Cons (hd_patt, List []) ->
+  | Cons (hd_patt, (List [], _)) ->
     let+ hd_type = judge_match_patt_type hd_patt in
     List hd_type
   | Cons (hd_patt, tl_patt) ->
@@ -265,10 +264,9 @@ and judge_common_type
     fail [ error (expected_type, seq_types) ]
 
 
-and extend_env_with_pattern (patt : patt) (env : lisp_type_env) : lisp_type_env =
+and extend_env_with_pattern ((patt, ty) : typed_patt) (env : lisp_type_env) : lisp_type_env =
   match patt with
-  | Bind var -> extend var Inferred env
-  | TypedBind (var, ty) -> extend var ty env
+  | Bind var -> extend var ty env
   | Int _ | Bool _ | Wildcard -> env
   | List patts -> List.fold_right (fun p acc -> extend_env_with_pattern p acc) patts env
   | Cons (hd_patt, tl_patt) ->

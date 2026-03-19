@@ -51,7 +51,7 @@ let test_transpile_from_file
 (** 整数値の定義のテスト *)
 let test_int () =
   scope_counter := 0;
-  let program = [ Decl (Def (Val (TypedBind (v "n", Lisp_type.Inferred)), Int 42)) ] in
+  let program = [ Decl (Def (Val (Bind (v "n"), Lisp_type.Inferred), Int 42)) ] in
   let expected_file = "expected/int.ml" in
   test_transpile_from_file "int definition" program expected_file ()
 
@@ -60,7 +60,7 @@ let test_int () =
 let test_bool () =
   scope_counter := 0;
   let program =
-    [ Decl (Def (Val (TypedBind (v "flag", Lisp_type.Inferred)), Bool true)) ]
+    [ Decl (Def (Val (Bind (v "flag"), Lisp_type.Inferred), Bool true)) ]
   in
   let expected_file = "expected/bool.ml" in
   test_transpile_from_file "bool definition" program expected_file ()
@@ -72,7 +72,7 @@ let test_list () =
   let program =
     [ Decl
         (Def
-           (Val (TypedBind (v "nums", Lisp_type.(List Int))), List [ Int 1; Int 2; Int 3 ]))
+           (Val (Bind (v "nums"), Lisp_type.(List Int)), List [ Int 1; Int 2; Int 3 ]))
     ]
   in
   let expected_file = "expected/list.ml" in
@@ -90,7 +90,7 @@ let test_function () =
         (Def
            ( Func
                ( add
-               , [ TypedBind (x, Lisp_type.Int); TypedBind (y, Lisp_type.Int) ]
+               , [ Bind x, Lisp_type.Int; Bind y, Lisp_type.Int ]
                , Lisp_type.Int )
            , FnAp [ Sym (v0 "+"); Sym x; Sym y ] ))
     ]
@@ -107,7 +107,7 @@ let test_recursive_function () =
   let program =
     [ Decl
         (Def
-           ( Func (fact, [ TypedBind (n, Lisp_type.Int) ], Lisp_type.Int)
+           ( Func (fact, [ Bind n, Lisp_type.Int ], Lisp_type.Int)
            , If
                ( FnAp [ Sym (v0 "="); Sym n; Int 0 ]
                , Int 1
@@ -140,15 +140,15 @@ let test_let () =
         (Def
            ( Func (calc1, [], Lisp_type.Int)
            , Let
-               ( [ Val (TypedBind (x1, Lisp_type.Int)), Int 10 ]
+               ( [ Val (Bind x1, Lisp_type.Int), Int 10 ]
                , FnAp [ Sym (v0 "+"); Sym x1; Int 5 ] ) ))
     ; (* ネストlet *)
       Decl
         (Def
            ( Func (calc2, [], Lisp_type.Int)
            , Let
-               ( [ Val (TypedBind (x2, Lisp_type.Int)), Int 10
-                 ; ( Val (TypedBind (y2, Lisp_type.Int))
+               ( [ Val (Bind x2, Lisp_type.Int), Int 10
+                 ; ( Val (Bind y2, Lisp_type.Int)
                    , FnAp [ Sym (v0 "+"); Sym x2; Int 5 ] )
                  ]
                , FnAp [ Sym (v0 "+"); Sym x2; Sym y2 ] ) ))
@@ -157,9 +157,9 @@ let test_let () =
         (Def
            ( Func (calc3, [], Lisp_type.Int)
            , Let
-               ( [ Val (TypedBind (x3, Lisp_type.Int)), Int 10
-                 ; Val (TypedBind (y3, Lisp_type.Int)), Int 20
-                 ; Val (TypedBind (z3, Lisp_type.Int)), Int 30
+               ( [ Val (Bind x3, Lisp_type.Int), Int 10
+                 ; Val (Bind y3, Lisp_type.Int), Int 20
+                 ; Val (Bind z3, Lisp_type.Int), Int 30
                  ]
                , FnAp [ Sym (v0 "+"); Sym x3; FnAp [ Sym (v0 "+"); Sym y3; Sym z3 ] ] ) ))
     ]
@@ -176,7 +176,7 @@ let test_if () =
   let program =
     [ Decl
         (Def
-           ( Func (abs, [ TypedBind (x, Lisp_type.Int) ], Lisp_type.Int)
+           ( Func (abs, [ Bind x, Lisp_type.Int ], Lisp_type.Int)
            , If
                ( FnAp [ Sym (v0 "<"); Sym x; Int 0 ]
                , FnAp [ Sym (v0 "-"); Int 0; Sym x ]
@@ -198,11 +198,11 @@ let test_match () =
     [ Decl
         (Def
            ( Func
-               (list_sum, [ TypedBind (lst, Lisp_type.List Lisp_type.Int) ], Lisp_type.Int)
+               (list_sum, [ Bind lst, Lisp_type.List Lisp_type.Int ], Lisp_type.Int)
            , Match
                ( Sym lst
-               , [ List [], Int 0
-                 ; ( Cons (TypedBind (x, Inferred), TypedBind (xs, Inferred))
+               , [ (List [], Inferred), Int 0
+                 ; ( (Cons ((Bind x, Inferred), (Bind xs, Inferred)), Inferred)
                    , FnAp [ Sym (v0 "+"); Sym x; FnAp [ Sym list_sum; Sym xs ] ] )
                  ] ) ))
     ]

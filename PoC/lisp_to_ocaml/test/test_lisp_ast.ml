@@ -48,7 +48,7 @@ let test_shadowing_by_function_arg () =
   let n = v "n" in
   let expr =
     Fn
-      ( [ TypedBind (fact2, Lisp_type.Int); TypedBind (n, Lisp_type.Int) ]
+      ( [ Bind fact2, Lisp_type.Int; Bind n, Lisp_type.Int ]
       , Lisp_type.Inferred
       , Sym fact2 )
   in
@@ -61,7 +61,7 @@ let test_shadowing_by_let () =
   scope_counter := 0;
   let fact1 = v "fact" in
   let fact2 = v "fact" in
-  let expr = Let ([ Val (TypedBind (fact2, Lisp_type.Inferred)), Int 42 ], Sym fact2) in
+  let expr = Let ([ Val (bind_patt fact2 Lisp_type.Inferred), Int 42 ], Sym fact2) in
   let result = contains_rec_call fact1 expr in
   Alcotest.(check bool) "shadowed by let binding" false result
 
@@ -73,7 +73,7 @@ let test_recursion_in_let_binding () =
   let x = v "x" in
   let n = v "n" in
   let expr =
-    Let ([ Val (TypedBind (x, Lisp_type.Inferred)), FnAp [ Sym fact; Sym n ] ], Sym x)
+    Let ([ Val (Bind x, Lisp_type.Inferred), FnAp [ Sym fact; Sym n ] ], Sym x)
   in
   let result = contains_rec_call fact expr in
   Alcotest.(check bool) "recursion in let binding expression" true result
@@ -88,9 +88,9 @@ let test_shadowing_in_middle_of_bindings () =
   let y = v "y" in
   let expr =
     Let
-      ( [ Val (TypedBind (x, Lisp_type.Inferred)), FnAp [ Sym fact; Int 5 ]
-        ; Val (TypedBind (fact_shadow, Lisp_type.Inferred)), Int 100
-        ; Val (TypedBind (y, Lisp_type.Inferred)), Sym fact_shadow
+      ( [ Val (bind_patt x Lisp_type.Inferred), FnAp [ Sym fact; Int 5 ]
+        ; Val (bind_patt fact_shadow Lisp_type.Inferred), Int 100
+        ; Val (bind_patt y Lisp_type.Inferred), Sym fact_shadow
         ]
       , Sym fact_shadow )
   in
@@ -107,9 +107,9 @@ let test_early_shadowing_in_let () =
   let y = v "y" in
   let expr =
     Let
-      ( [ Val (TypedBind (fact2, Lisp_type.Inferred)), Int 100
-        ; Val (TypedBind (x, Lisp_type.Inferred)), Sym fact2
-        ; Val (TypedBind (y, Lisp_type.Inferred)), Sym fact2
+      ( [ Val (bind_patt fact2 Lisp_type.Inferred), Int 100
+        ; Val (bind_patt x Lisp_type.Inferred), Sym fact2
+        ; Val (bind_patt y Lisp_type.Inferred), Sym fact2
         ]
       , Sym fact2 )
   in
@@ -126,8 +126,8 @@ let test_shadowing_by_match_pattern () =
   let expr =
     Match
       ( Sym x
-      , [ TypedBind (fact_shadow, Inferred), Sym fact_shadow
-        ; Wildcard, FnAp [ Sym fact; Int 1 ]
+      , [ bind_patt fact_shadow Lisp_type.Inferred, Sym fact_shadow
+        ; wildcard_patt (), FnAp [ Sym fact; Int 1 ]
         ] )
   in
   let result = contains_rec_call fact expr in
@@ -139,7 +139,7 @@ let test_recursion_in_match_value () =
   scope_counter := 0;
   let fact = v "fact" in
   let n = v "n" in
-  let expr = Match (FnAp [ Sym fact; Sym n ], [ Wildcard, Int 0 ]) in
+  let expr = Match (FnAp [ Sym fact; Sym n ], [ wildcard_patt (), Int 0 ]) in
   let result = contains_rec_call fact expr in
   Alcotest.(check bool) "recursion in match value" true result
 
@@ -150,7 +150,7 @@ let test_recursion_in_match_case () =
   let fact = v "fact" in
   let x = v "x" in
   let n = v "n" in
-  let expr = Match (Sym x, [ Wildcard, FnAp [ Sym fact; Sym n ] ]) in
+  let expr = Match (Sym x, [ wildcard_patt (), FnAp [ Sym fact; Sym n ] ]) in
   let result = contains_rec_call fact expr in
   Alcotest.(check bool) "recursion in match case" true result
 

@@ -242,53 +242,54 @@ and parse_type_annotation () : T.lisp_type parser =
 (* パターンパーサー *)
 (* ================================ *)
 
-let rec parse_patt () : patt parser =
+let rec parse_patt () : typed_patt parser =
   skip_whitespace
     (parse_bool_patt ()
      <|> parse_int_patt ()
      <|> parse_wildcard_patt ()
      <|> parse_list_patt ()
      <|> parse_cons_patt ()
-     <|> parse_simple_bind_patt ()
-     <|> parse_typed_bind_patt ())
+     <|> parse_bind_patt ())
 
 
-and parse_bool_patt () : patt parser =
+and parse_bool_patt () : typed_patt parser =
   keyword "true"
   >>= (fun _ -> return (bool_patt true))
   <|> (keyword "false" >>= fun _ -> return (bool_patt false))
 
 
-and parse_int_patt () : patt parser = lexeme integer >>= fun n -> return (int_patt n)
-and parse_wildcard_patt () : patt parser = char '_' >>= fun _ -> return (wildcard_patt ())
+and parse_int_patt () : typed_patt parser = lexeme integer >>= fun n -> return (int_patt n)
+and parse_wildcard_patt () : typed_patt parser = char '_' >>= fun _ -> return (wildcard_patt ())
 
-and parse_list_patt () : patt parser =
+and parse_list_patt () : typed_patt parser =
   let* _ = lexeme (char '[') in
-  let* patterns : patt list = many (parse_patt ()) in
+  let* patterns = many (parse_patt ()) in
   let* _ = lexeme (char ']') in
   return (list_patt patterns)
 
 
-and parse_cons_patt () : patt parser =
+and parse_cons_patt () : typed_patt parser =
   let* _ = lexeme (char '(') in
   let* first = parse_patt () in
   let* _ = lexeme (string "::") in
   let* second = parse_patt () in
   let* _ = lexeme (char ')') in
-  return (Cons (first, second))
+  return (cons_patt first second)
 
 
-and parse_simple_bind_patt () : patt parser =
-  let* name = lexeme identifier in
-  return (Bind (top_var name))
-
-
-and parse_typed_bind_patt () : patt parser =
-  let* _ = lexeme (char '(') in
-  let* name = lexeme identifier in
-  let* ty = parse_type_annotation () in
-  let* _ = lexeme (char ')') in
-  return (TypedBind (top_var name, ty))
+and parse_bind_patt () : typed_patt parser =
+  let typed () =
+    let* _ = lexeme (char '(') in
+    let* name = lexeme identifier in
+    let* ty = parse_type_annotation () in
+    let* _ = lexeme (char ')') in
+    return (Bind (top_var name), ty)
+  in
+  let simple () =
+    let* name = lexeme identifier in
+    return (Bind (top_var name), T.Inferred)
+  in
+  (typed () <|> simple ())
 
 
 let parse_val_binding_patt () : binding_patt parser =
@@ -432,16 +433,13 @@ and parse_application () : lisp_expr parser =
 (* 宣言パーサー *)
 (* ================================ *)
 
-(* letと同じような束縛パターンを適用したいが、型注釈についての一般化が十分でない *)
 let parse_def_val_binding_patt () : binding_patt parser =
   let* patt = parse_patt () in
   let* otp_type = optional (parse_type_annotation ()) in
   match otp_type with
   | Some t ->
     (match patt with
-     | Bind name -> return (Val (TypedBind (name, t)))
-     | TypedBind (name, _) -> return (Val (TypedBind (name, t)))
-     | _ -> fail "Not implemented: 型注釈について再考する必要がある")
+     | (p, _) -> return (Val (p, t)))
   | None -> return (Val patt)
 
 
