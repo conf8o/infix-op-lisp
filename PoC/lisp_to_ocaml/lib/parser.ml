@@ -233,57 +233,67 @@ and parse_arrow_type () : T.lisp_type parser =
   parse_arrow_parts []
 
 
+and parse_type_annotation () : T.lisp_type parser =
+  let* _ = lexeme (char ':') in
+  parse_type ()
+
+
 (* ================================ *)
 (* パターンパーサー *)
 (* ================================ *)
 
-let rec parse_pattern () : patt parser =
+let rec parse_patt () : patt parser =
   skip_whitespace
-    (keyword "true"
-     >>= (fun _ -> return (bool_patt true))
-     <|> (keyword "false" >>= fun _ -> return (bool_patt false))
-     <|> (lexeme integer >>= fun n -> return (int_patt n))
-     <|> (char '_' >>= fun _ -> return Wildcard)
-     <|> parse_list_pattern ()
-     <|> parse_paren_pattern ()
-     <|> parse_typed_bind ()
-     <|> parse_simple_bind ())
+    (parse_bool_patt ()
+     <|> parse_int_patt ()
+     <|> parse_wildcard_patt ()
+     <|> parse_list_patt ()
+     <|> parse_cons_patt ()
+     <|> parse_simple_bind_patt ()
+     <|> parse_typed_bind_patt ())
 
 
-and parse_simple_bind () : patt parser =
-  let* name = lexeme identifier in
-  return (Bind (top_var name))
+and parse_bool_patt () : patt parser =
+  keyword "true"
+  >>= (fun _ -> return (bool_patt true))
+  <|> (keyword "false" >>= fun _ -> return (bool_patt false))
 
 
-and parse_typed_bind () : patt parser =
-  let* _ = lexeme (char '(') in
-  let* name = lexeme identifier in
-  let* _ = lexeme (char ':') in
-  let* ty = parse_type () in
-  let* _ = lexeme (char ')') in
-  return (TypedBind (top_var name, ty))
+and parse_int_patt () : patt parser = lexeme integer >>= fun n -> return (int_patt n)
+and parse_wildcard_patt () : patt parser = char '_' >>= fun _ -> return (wildcard_patt ())
 
-
-and parse_list_pattern () : patt parser =
+and parse_list_patt () : patt parser =
   let* _ = lexeme (char '[') in
-  let* patterns : patt list = many (parse_pattern ()) in
+  let* patterns : patt list = many (parse_patt ()) in
   let* _ = lexeme (char ']') in
   return (list_patt patterns)
 
 
-and parse_paren_pattern () : patt parser =
+and parse_cons_patt () : patt parser =
   let* _ = lexeme (char '(') in
-  let* first = parse_pattern () in
-  let* cons_opt = optional (lexeme (string "::")) in
-  match cons_opt with
-  | Some _ ->
-    let* second = parse_pattern () in
-    let* _ = lexeme (char ')') in
-    return (Cons (first, second))
-  | None ->
-    let* rest = many (parse_pattern ()) in
-    let* _ = lexeme (char ')') in
-    return (list_patt (first :: rest))
+  let* first = parse_patt () in
+  let* _ = lexeme (string "::") in
+  let* second = parse_patt () in
+  let* _ = lexeme (char ')') in
+  return (Cons (first, second))
+
+
+and parse_simple_bind_patt () : patt parser =
+  let* name = lexeme identifier in
+  return (Bind (top_var name))
+
+
+and parse_typed_bind_patt () : patt parser =
+  let* _ = lexeme (char '(') in
+  let* name = lexeme identifier in
+  let* ty = parse_type_annotation () in
+  let* _ = lexeme (char ')') in
+  return (TypedBind (top_var name, ty))
+
+
+let parse_val_binding_patt () : binding_patt parser =
+  let* name = parse_patt () in
+  return (Val name)
 
 
 (* ================================ *)
@@ -292,20 +302,30 @@ and parse_paren_pattern () : patt parser =
 
 let rec parse_expr () : lisp_expr parser =
   skip_whitespace
-    (keyword "true"
-     >>= (fun _ -> return (Bool true))
-     <|> (keyword "false" >>= fun _ -> return (Bool false))
-     <|> (lexeme integer >>= fun n -> return (Int n))
+    (parse_bool_expr ()
+     <|> parse_int_expr ()
      <|> parse_list_expr ()
      <|> parse_paren_expr ()
-     <|> (lexeme identifier >>= fun name -> return (Sym (top_var name))))
+     <|> parse_sym_expr ())
 
+
+and parse_bool_expr () : lisp_expr parser =
+  keyword "true"
+  >>= (fun _ -> return (Bool true))
+  <|> (keyword "false" >>= fun _ -> return (Bool false))
+
+
+and parse_int_expr () : lisp_expr parser = lexeme integer >>= fun n -> return (Int n)
 
 and parse_list_expr () : lisp_expr parser =
   let* _ = lexeme (char '[') in
   let* exprs = many (parse_expr ()) in
   let* _ = lexeme (char ']') in
   return (List exprs)
+
+
+and parse_sym_expr () : lisp_expr parser =
+  lexeme identifier >>= fun name -> return (Sym (top_var name))
 
 
 and parse_paren_expr () : lisp_expr parser =
@@ -329,71 +349,43 @@ and parse_let_form () : lisp_expr parser =
 
 and parse_let_bindings () : binding list parser = many (parse_let_binding ())
 
+and parse_let_simple_func_binding_patt () : binding_patt parser =
+  let* _ = lexeme (char '(') in
+  let* name = lexeme identifier in
+  let* params = many (parse_patt ()) in
+  let* _ = lexeme (char ')') in
+  return (Func (top_var name, params, T.Inferred))
+
+
+and parse_let_typed_func_binding_patt () : binding_patt parser =
+  let* _ = lexeme (char '(') in
+  let* _ = lexeme (char '(') in
+  let* name = lexeme identifier in
+  let* params = many (parse_patt ()) in
+  let* _ = lexeme (char ')') in
+  let* ret_type = parse_type_annotation () in
+  let* _ = lexeme (char ')') in
+  return (Func (top_var name, params, ret_type))
+
+
 and parse_let_binding () : binding parser =
   skip_whitespace
-    ((let* _ = lexeme (char '(') in
-      let* name = lexeme identifier in
-      let* colon_opt = optional (lexeme (char ':')) in
-      match colon_opt with
-      | Some _ ->
-        (* (name : Type) value の形式 *)
-        let* ty = parse_type () in
-        let* _ = lexeme (char ')') in
-        let* value = parse_expr () in
-        return (Val (TypedBind (top_var name, ty)), value)
-      | None ->
-        (* (name params...) body の形式 *)
-        let* params = many (parse_param ()) in
-        let* _ = lexeme (char ')') in
-        let* type_opt =
-          optional
-            (let* _ = lexeme (char ':') in
-             parse_type ())
-        in
-        let* body = parse_expr () in
-        let ret_type =
-          match type_opt with
-          | Some t -> t
-          | None -> T.Inferred
-        in
-        return (Func (top_var name, params, ret_type), body))
-     <|>
-     let* name = lexeme identifier in
-     let* type_opt =
-       optional
-         (let* _ = lexeme (char ':') in
-          parse_type ())
+    (let* patt =
+       parse_val_binding_patt ()
+       <|> parse_let_typed_func_binding_patt ()
+       <|> parse_let_simple_func_binding_patt ()
      in
      let* value = parse_expr () in
-     match type_opt with
-     | Some ty -> return (Val (TypedBind (top_var name, ty)), value)
-     | None -> return (Val (Bind (top_var name)), value))
-
-
-and parse_param () : patt parser =
-  skip_whitespace
-    ((let* _ = lexeme (char '(') in
-      let* name = lexeme identifier in
-      let* _ = lexeme (char ':') in
-      let* ty = parse_type () in
-      let* _ = lexeme (char ')') in
-      return (TypedBind (top_var name, ty)))
-     <|>
-     let* name = lexeme identifier in
-     return (Bind (top_var name)))
+     return (patt, value))
 
 
 and parse_fn_form () : lisp_expr parser =
   let* _ = lexeme (char '(') in
   let* _ = keyword "fn" in
   let* _ = lexeme (char '(') in
-  let* params = many (parse_param ()) in
+  let* params = many (parse_patt ()) in
   let* _ = lexeme (char ')') in
-  let* type_opt =
-    optional
-      (let* _ = lexeme (char ':') in
-       parse_type ())
-  in
+  let* type_opt = optional (parse_type_annotation ()) in
   let* body = parse_expr () in
   let* _ = lexeme (char ')') in
   let ret_type =
@@ -424,7 +416,7 @@ and parse_match_form () : lisp_expr parser =
 
 
 and parse_match_case () : matching_case parser =
-  let* pattern = parse_pattern () in
+  let* pattern = parse_patt () in
   let* expr = parse_expr () in
   return (pattern, expr)
 
@@ -440,42 +432,43 @@ and parse_application () : lisp_expr parser =
 (* 宣言パーサー *)
 (* ================================ *)
 
-let parse_def_func () : lisp_decl parser =
+(* letと同じような束縛パターンを適用したいが、型注釈についての一般化が十分でない *)
+let parse_def_val_binding_patt () : binding_patt parser =
+  let* patt = parse_patt () in
+  let* otp_type = optional (parse_type_annotation ()) in
+  match otp_type with
+  | Some t ->
+    (match patt with
+     | Bind name -> return (Val (TypedBind (name, t)))
+     | TypedBind (name, _) -> return (Val (TypedBind (name, t)))
+     | _ -> fail "Not implemented: 型注釈について再考する必要がある")
+  | None -> return (Val patt)
+
+
+let parse_def_func_binding_patt () : binding_patt parser =
   let* _ = lexeme (char '(') in
   let* name = lexeme identifier in
-  let* params = many (parse_param ()) in
+  let* params = many (parse_patt ()) in
   let* _ = lexeme (char ')') in
-  let* type_opt =
-    optional
-      (let* _ = lexeme (char ':') in
-       parse_type ())
-  in
-  let* body = parse_expr () in
+  let* opt_type = optional (parse_type_annotation ()) in
   let ret_type =
-    match type_opt with
+    match opt_type with
     | Some t -> t
     | None -> T.Inferred
   in
-  return (Def (Func (top_var name, params, ret_type), body))
+  return (Func (top_var name, params, ret_type))
 
 
-let parse_def_val () : lisp_decl parser =
-  let* name = lexeme identifier in
-  let* type_opt =
-    optional
-      (let* _ = lexeme (char ':') in
-       parse_type ())
-  in
+let parse_def_binding_patt () : lisp_decl parser =
+  let* binding_patt = parse_def_val_binding_patt () <|> parse_def_func_binding_patt () in
   let* value = parse_expr () in
-  match type_opt with
-  | Some ty -> return (Def (Val (TypedBind (top_var name, ty)), value))
-  | None -> return (Def (Val (Bind (top_var name)), value))
+  return (Def (binding_patt, value))
 
 
 let parse_def () : lisp_decl parser =
   let* _ = lexeme (char '(') in
   let* _ = keyword "def" in
-  let* def = parse_def_func () <|> parse_def_val () in
+  let* def = parse_def_binding_patt () in
   let* _ = lexeme (char ')') in
   return def
 
@@ -488,12 +481,11 @@ let parse_lisp () : lisp parser =
   skip_whitespace
     ((let* decl = parse_def () in
       return (Decl decl))
-     <|>
-     let* expr = parse_expr () in
-     return (Expr expr))
+     <|> let* expr = parse_expr () in
+         return (Expr expr))
 
 
-let parse (input : string) : lisp list =
+let parse (input : string) : (lisp list, string) result =
   match many (parse_lisp ()) input with
-  | Success (result, _) -> result
-  | Failure (msg, _) -> failwith ("Parse error: " ^ msg)
+  | Success (result, _) -> Ok result
+  | Failure (msg, _) -> Error msg

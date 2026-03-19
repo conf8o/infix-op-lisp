@@ -31,7 +31,7 @@ let () =
 (def sorted (quicksort unsorted))
 |}
   in
-  let parsed_program = Parser.parse program in
+  let parsed_program = Parser.parse program |> Result.get_ok in
   let structures = List.concat_map to_structure parsed_program in
   let oc = open_out "bin/generated.ml" in
   let fmt = Format.formatter_of_out_channel oc in
