@@ -11,30 +11,29 @@ let top_var s = make_var s top_level_scope_id
 それをパターンから外し、パターンを型注釈で囲う「型注釈つきパターン」を考える必要性があるかもしれない *)
 type patt =
   | Bind of var
-  | TypedBind of var * lisp_type
   | Int of int
   | Bool of bool
-  | List of patt list
-  | Cons of patt * patt
+  | List of typed_patt list
+  | Cons of typed_patt * typed_patt
   | Wildcard
+and typed_patt = patt * lisp_type
 
-let bind_patt var = Bind var
-let typed_bind_patt var ty = TypedBind (var, ty)
-let int_patt n = Int n
-let bool_patt b = Bool b
-let list_patt patts = List patts
-let cons_patt hd tl = Cons (hd, tl)
-let wildcard_patt () = Wildcard
+let bind_patt var ty = (Bind var, ty)
+let int_patt n = (Int n, Inferred)
+let bool_patt b = (Bool b, Inferred)
+let list_patt patts = (List patts, Inferred)
+let cons_patt hd tl = (Cons (hd, tl), Inferred)
+let wildcard_patt () = (Wildcard, Inferred)
 
 type binding_patt =
-  | Val of patt
-  | Func of var * patt list * lisp_type
+  | Val of typed_patt
+  | Func of var * typed_patt list * lisp_type
 
 type lisp_expr =
   | Int of int
   | Bool of bool
   | Sym of var
-  | Fn of patt list * lisp_type * lisp_expr
+  | Fn of typed_patt list * lisp_type * lisp_expr
   | FnAp of lisp_expr list
   | Let of binding list * lisp_expr
   | If of lisp_expr * lisp_expr * lisp_expr
@@ -42,7 +41,7 @@ type lisp_expr =
   | Match of lisp_expr * matching_case list
 
 and binding = binding_patt * lisp_expr
-and matching_case = patt * lisp_expr
+and matching_case = typed_patt * lisp_expr
 
 type lisp_decl = Def of binding
 
@@ -97,10 +96,9 @@ let rec lisp_to_string (lisp : lisp) : string =
   | Expr expr -> to_string_expr expr
 
 
-and patt_to_string = function
+and patt_to_string (patt, _) =
+  match patt with
   | Bind var -> var_to_string var
-  | TypedBind (var, ty) ->
-    Printf.sprintf "(%s : %s)" (var_to_string var) (lisp_type_to_string ty)
   | Int n -> string_of_int n
   | Bool b -> string_of_bool b
   | List patts ->
@@ -212,10 +210,9 @@ and inspect_binding_patt = function
       (inspect_type ret_ty)
 
 
-and inspect_patt = function
+and inspect_patt (patt, _) =
+  match patt with
   | Bind var -> Printf.sprintf "Bind %s" (inspect_var var)
-  | TypedBind (var, ty) ->
-    Printf.sprintf "TypedBind (%s, %s)" (inspect_var var) (inspect_type ty)
   | Int n -> Printf.sprintf "Int %d" n
   | Bool b -> Printf.sprintf "Bool %b" b
   | List patts ->

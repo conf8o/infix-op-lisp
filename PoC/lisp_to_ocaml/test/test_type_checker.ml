@@ -16,7 +16,10 @@ let assert_type_ok expected_type checker =
   let result = run checker (init_type_env ()) in
   match result with
   | Success actual_type ->
-    Alcotest.(check bool) "type matches" true (expected_type = actual_type)
+    Alcotest.(check bool)
+      (Printf.sprintf "type matches:\n  expected: %s\n  actual: %s" (T.to_string expected_type) (T.to_string actual_type))
+      true
+      (expected_type = actual_type)
   | Failure _ -> Alcotest.fail "Expected success but got type error"
 
 
@@ -64,7 +67,7 @@ let test_judge_type_sym () =
 let test_judge_fn_type_simple () =
   scope_counter := 0;
   let x = v "x" in
-  let args = [ TypedBind (x, T.Int) ] in
+  let args = [ Bind (x), T.Int ] in
   let body = Sym x in
   let return_type = T.Int in
   let checker = judge_fn_type args return_type body in
@@ -76,7 +79,7 @@ let test_judge_fn_type_multiple_args () =
   let x = v "x" in
   let y = v "y" in
   let plus_var = top_var "+" in
-  let args = [ TypedBind (x, T.Int); TypedBind (y, T.Int) ] in
+  let args = [ Bind x, T.Int; Bind y, T.Int ] in
   let body = FnAp [ Sym plus_var; Sym x; Sym y ] in
   let return_type = T.Int in
   let checker = judge_fn_type args return_type body in
@@ -128,7 +131,7 @@ let test_judge_fnap_return_type_no_args () =
 let test_judge_let_type_single_binding () =
   scope_counter := 0;
   let x = v "x" in
-  let bindings = [ Val (TypedBind (x, T.Int)), Int 42 ] in
+  let bindings = [ Val (Bind x, T.Int), Int 42 ] in
   let body = Sym x in
   let checker = judge_let_type bindings body in
   assert_type_ok T.Int checker
@@ -140,7 +143,7 @@ let test_judge_let_type_multiple_bindings () =
   let y = v "y" in
   let plus_var = top_var "+" in
   let bindings =
-    [ Val (TypedBind (x, T.Int)), Int 10; Val (TypedBind (y, T.Int)), Int 20 ]
+    [ Val (Bind x, T.Int), Int 10; Val (Bind y, T.Int), Int 20 ]
   in
   let body = FnAp [ Sym plus_var; Sym x; Sym y ] in
   let checker = judge_let_type bindings body in
@@ -185,7 +188,7 @@ let test_jugde_if_pred_type_comparison () =
 let test_judge_match_type_int () =
   scope_counter := 0;
   let value = Int 42 in
-  let cases : matching_case list = [ Int 0, Bool true; Wildcard, Bool false ] in
+  let cases : matching_case list = [ int_patt 0, Bool true; wildcard_patt (), Bool false ] in
   let checker = judge_match_type value cases in
   assert_type_ok T.Bool checker
 

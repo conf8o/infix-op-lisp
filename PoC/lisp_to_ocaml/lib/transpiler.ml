@@ -160,7 +160,7 @@ let rec to_ocaml_exp (e : lisp_expr) : expression =
     Exp.match_ value_exp ocaml_cases
 
 
-and fn_args_to_params (patts : patt list) : function_param list =
+and fn_args_to_params (patts : typed_patt list) : function_param list =
   match patts with
   | [] ->
     (* 引数なし: fun () -> body のためのunitパラメータを作成 *)
@@ -172,9 +172,9 @@ and fn_args_to_params (patts : patt list) : function_param list =
     ]
   | _ ->
     List.map
-      (fun patt ->
+      (fun (patt, ty) ->
          { pparam_loc = Location.none
-         ; pparam_desc = Pparam_val (Nolabel, None, to_ocaml_pat patt)
+         ; pparam_desc = Pparam_val (Nolabel, None, to_ocaml_pat (patt, ty))
          })
       patts
 
@@ -192,10 +192,9 @@ and to_list_exp (elements : lisp_expr list) : expression =
 
 
 (** pattをOCamlのパターンに変換する *)
-and to_ocaml_pat (p : patt) : pattern =
+and to_ocaml_pat ((p, ty) : typed_patt) : pattern =
   match p with
-  | Bind v -> to_variable_pat v
-  | TypedBind (v, ty) -> to_typed_variable_pat v ty
+  | Bind v -> to_typed_variable_pat v ty
   | Int n -> Pat.constant (Const.int n)
   | Bool b ->
     Pat.construct
@@ -219,7 +218,7 @@ and to_ocaml_pat (p : patt) : pattern =
 
 
 (** リストパターンをOCamlのリストパターンに変換する *)
-and to_list_pat (patterns : patt list) : pattern =
+and to_list_pat (patterns : typed_patt list) : pattern =
   match patterns with
   | [] -> to_empty_list_pat ()
   | hd :: tl ->
@@ -247,12 +246,11 @@ and binding_to_value_binding (b : binding) : value_binding * rec_flag =
     let val_exp = to_ocaml_exp expr in
     Vb.mk (to_ocaml_pat patt) val_exp, rec_flag
   | Func (var, args, return_type) ->
-    binding_to_value_binding (Val (Bind var), Fn (args, return_type, expr))
+    binding_to_value_binding (Val (Bind var, Inferred), Fn (args, return_type, expr))
 
 
-and binding_to_rec_flag (patt : patt) (expr : lisp_expr) : rec_flag =
+and binding_to_rec_flag ((patt, _) : typed_patt) (expr : lisp_expr) : rec_flag =
   match patt with
-  | TypedBind (var, _) -> judge_rec var expr
   | Bind var -> judge_rec var expr
   | _ -> Nonrecursive
 
