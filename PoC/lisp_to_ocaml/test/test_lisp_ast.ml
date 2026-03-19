@@ -48,9 +48,7 @@ let test_shadowing_by_function_arg () =
   let n = v "n" in
   let expr =
     Fn
-      ( [ Bind fact2, Lisp_type.Int; Bind n, Lisp_type.Int ]
-      , Lisp_type.Inferred
-      , Sym fact2 )
+      ([ Bind fact2, Lisp_type.Int; Bind n, Lisp_type.Int ], Lisp_type.Inferred, Sym fact2)
   in
   let result = contains_rec_call fact1 expr in
   Alcotest.(check bool) "shadowed by function argument" false result

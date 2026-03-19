@@ -258,8 +258,13 @@ and parse_bool_patt () : typed_patt parser =
   <|> (keyword "false" >>= fun _ -> return (bool_patt false))
 
 
-and parse_int_patt () : typed_patt parser = lexeme integer >>= fun n -> return (int_patt n)
-and parse_wildcard_patt () : typed_patt parser = char '_' >>= fun _ -> return (wildcard_patt ())
+and parse_int_patt () : typed_patt parser =
+  lexeme integer >>= fun n -> return (int_patt n)
+
+
+and parse_wildcard_patt () : typed_patt parser =
+  char '_' >>= fun _ -> return (wildcard_patt ())
+
 
 and parse_list_patt () : typed_patt parser =
   let* _ = lexeme (char '[') in
@@ -289,7 +294,7 @@ and parse_bind_patt () : typed_patt parser =
     let* name = lexeme identifier in
     return (Bind (top_var name), T.Inferred)
   in
-  (typed () <|> simple ())
+  typed () <|> simple ()
 
 
 let parse_val_binding_patt () : binding_patt parser =
@@ -439,7 +444,7 @@ let parse_def_val_binding_patt () : binding_patt parser =
   match otp_type with
   | Some t ->
     (match patt with
-     | (p, _) -> return (Val (p, t)))
+     | p, _ -> return (Val (p, t)))
   | None -> return (Val patt)
 
 

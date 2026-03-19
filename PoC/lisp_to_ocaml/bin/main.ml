@@ -22,10 +22,10 @@ let () =
   (match lst
     [] []
     (pivot :: rest)
-      (let (smaller (filter (fn (x) (< x pivot)) rest)
-            greater (filter (fn (x) (>= x pivot)) rest))
-        (append (append (quicksort smaller) (:: pivot []))
-                (quicksort greater)))))
+    (let (smaller (filter (fn (x) (< x pivot)) rest)
+          greater (filter (fn (x) (>= x pivot)) rest))
+      (append (append (quicksort smaller) (:: pivot []))
+              (quicksort greater)))))
 
 (def unsorted [3 1 4 1 5 9 2 6])
 (def sorted (quicksort unsorted))

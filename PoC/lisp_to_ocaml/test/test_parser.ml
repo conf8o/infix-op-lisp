@@ -76,7 +76,7 @@ let test_parse_simple_function () =
   let input = "(def (f x) (+ x 1))" in
   let result = parse input in
   match result with
-  | Ok [ Decl (Def (Func (_, [ Bind _, _ ], T.Inferred), FnAp _)) ] ->
+  | Ok [ Decl (Def (Func (_, [ (Bind _, _) ], T.Inferred), FnAp _)) ] ->
     Alcotest.(check pass) "parse simple function" () ()
   | Ok fail -> fail_parse fail "Expected simple function definition"
   | Error msg -> Alcotest.fail ("Parse error: " ^ msg)
@@ -86,7 +86,7 @@ let test_parse_function_with_type () =
   let input = "(def (f x) : Int (+ x 1))" in
   let result = parse input in
   match result with
-  | Ok [ Decl (Def (Func (_, [ Bind _, _ ], T.Int), FnAp _)) ] ->
+  | Ok [ Decl (Def (Func (_, [ (Bind _, _) ], T.Int), FnAp _)) ] ->
     Alcotest.(check pass) "parse function with type" () ()
   | Ok fail -> fail_parse fail "Expected function with type annotation"
   | Error msg -> Alcotest.fail ("Parse error: " ^ msg)
@@ -96,7 +96,7 @@ let test_parse_function_with_typed_param () =
   let input = "(def (f (x : Int)) : Int (+ x 1))" in
   let result = parse input in
   match result with
-  | Ok [ Decl (Def (Func (_, [ Bind _, T.Int ], T.Int), FnAp _)) ] ->
+  | Ok [ Decl (Def (Func (_, [ (Bind _, T.Int) ], T.Int), FnAp _)) ] ->
     Alcotest.(check pass) "parse function with typed parameter" () ()
   | Ok fail -> fail_parse fail "Expected function with typed parameter"
   | Error msg -> Alcotest.fail ("Parse error: " ^ msg)
@@ -120,8 +120,8 @@ let test_parse_let_multiple_bindings () =
   let input = "(let (x 10 y 20) (+ x y))" in
   let result = parse input in
   match result with
-  | Ok [ Expr (Let ([ (Val (Bind _, _), Int 10); (Val (Bind _, _), Int 20) ], FnAp _)) ] ->
-    Alcotest.(check pass) "parse let with multiple bindings" () ()
+  | Ok [ Expr (Let ([ (Val (Bind _, _), Int 10); (Val (Bind _, _), Int 20) ], FnAp _)) ]
+    -> Alcotest.(check pass) "parse let with multiple bindings" () ()
   | Ok fail -> fail_parse fail "Expected let with multiple bindings"
   | Error msg -> Alcotest.fail ("Parse error: " ^ msg)
 
@@ -140,7 +140,7 @@ let test_parse_let_function () =
   let input = "(let ((f x) (+ x 1)) (f 10))" in
   let result = parse input in
   match result with
-  | Ok [ Expr (Let ([ (Func (_, [ Bind _, _ ], T.Inferred), FnAp _) ], FnAp _)) ] ->
+  | Ok [ Expr (Let ([ (Func (_, [ (Bind _, _) ], T.Inferred), FnAp _) ], FnAp _)) ] ->
     Alcotest.(check pass) "parse let with function binding" () ()
   | Ok fail -> fail_parse fail "Expected let with function binding"
   | Error msg -> Alcotest.fail ("Parse error: " ^ msg)
@@ -154,7 +154,7 @@ let test_parse_fn_simple () =
   let input = "(fn (x) x)" in
   let result = parse input in
   match result with
-  | Ok [ Expr (Fn ([ Bind _, _ ], T.Inferred, Sym _)) ] ->
+  | Ok [ Expr (Fn ([ (Bind _, _) ], T.Inferred, Sym _)) ] ->
     Alcotest.(check pass) "parse simple fn" () ()
   | Ok fail -> fail_parse fail "Expected simple fn expression"
   | Error msg -> Alcotest.fail ("Parse error: " ^ msg)
@@ -164,7 +164,7 @@ let test_parse_fn_with_type () =
   let input = "(fn (x) : Int x)" in
   let result = parse input in
   match result with
-  | Ok [ Expr (Fn ([ Bind _, _ ], T.Int, Sym _)) ] ->
+  | Ok [ Expr (Fn ([ (Bind _, _) ], T.Int, Sym _)) ] ->
     Alcotest.(check pass) "parse fn with type" () ()
   | Ok fail -> fail_parse fail "Expected fn with type annotation"
   | Error msg -> Alcotest.fail ("Parse error: " ^ msg)
@@ -174,7 +174,7 @@ let test_parse_fn_with_typed_param () =
   let input = "(fn ((x : Int)) x)" in
   let result = parse input in
   match result with
-  | Ok [ Expr (Fn ([ Bind _, T.Int ], T.Inferred, Sym _)) ] ->
+  | Ok [ Expr (Fn ([ (Bind _, T.Int) ], T.Inferred, Sym _)) ] ->
     Alcotest.(check pass) "parse fn with typed parameter" () ()
   | Ok fail -> fail_parse fail "Expected fn with typed parameter"
   | Error msg -> Alcotest.fail ("Parse error: " ^ msg)
@@ -212,8 +212,12 @@ let test_parse_match_list () =
   let input = "(match lst [] 0 (x :: xs) 1)" in
   let result = parse input in
   match result with
-  | Ok [ Expr (Match (Sym _, [ ((List [], _), Int 0); ((Cons ((Bind _, _), (Bind _, _)), _), Int 1) ])) ] ->
-    Alcotest.(check pass) "parse match with list patterns" () ()
+  | Ok
+      [ Expr
+          (Match
+             ( Sym _
+             , [ ((List [], _), Int 0); ((Cons ((Bind _, _), (Bind _, _)), _), Int 1) ] ))
+      ] -> Alcotest.(check pass) "parse match with list patterns" () ()
   | Ok fail -> fail_parse fail "Expected match with list patterns"
   | Error msg -> Alcotest.fail ("Parse error: " ^ msg)
 
@@ -293,7 +297,7 @@ let test_parse_multiple_definitions () =
   | Ok
       [ Decl (Def (Val (Bind _, _), Int 10))
       ; Decl (Def (Val (Bind _, _), Int 20))
-      ; Decl (Def (Func (_, [ Bind _, _; Bind _, _ ], T.Inferred), FnAp _))
+      ; Decl (Def (Func (_, [ (Bind _, _); (Bind _, _) ], T.Inferred), FnAp _))
       ; Decl (Def (Val (Bind _, _), FnAp _))
       ] -> Alcotest.(check pass) "parse multiple definitions" () ()
   | Ok fail -> fail_parse fail "Expected multiple definitions"

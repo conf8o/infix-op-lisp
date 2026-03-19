@@ -264,7 +264,9 @@ and judge_common_type
     fail [ error (expected_type, seq_types) ]
 
 
-and extend_env_with_pattern ((patt, ty) : typed_patt) (env : lisp_type_env) : lisp_type_env =
+and extend_env_with_pattern ((patt, ty) : typed_patt) (env : lisp_type_env)
+  : lisp_type_env
+  =
   match patt with
   | Bind var -> extend var ty env
   | Int _ | Bool _ | Wildcard -> env

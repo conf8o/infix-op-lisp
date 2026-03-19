@@ -7,8 +7,6 @@ let top_level_scope_id = ""
 let make_var s i = s, i
 let top_var s = make_var s top_level_scope_id
 
-(* 型注釈について再考すべき。現状、パターンの一つとして「型注釈つき束縛」を用意したが、
-それをパターンから外し、パターンを型注釈で囲う「型注釈つきパターン」を考える必要性があるかもしれない *)
 type patt =
   | Bind of var
   | Int of int
@@ -16,14 +14,15 @@ type patt =
   | List of typed_patt list
   | Cons of typed_patt * typed_patt
   | Wildcard
+
 and typed_patt = patt * lisp_type
 
-let bind_patt var ty = (Bind var, ty)
-let int_patt n = (Int n, Inferred)
-let bool_patt b = (Bool b, Inferred)
-let list_patt patts = (List patts, Inferred)
-let cons_patt hd tl = (Cons (hd, tl), Inferred)
-let wildcard_patt () = (Wildcard, Inferred)
+let bind_patt var ty = Bind var, ty
+let int_patt n = Int n, Inferred
+let bool_patt b = Bool b, Inferred
+let list_patt patts = List patts, Inferred
+let cons_patt hd tl = Cons (hd, tl), Inferred
+let wildcard_patt () = Wildcard, Inferred
 
 type binding_patt =
   | Val of typed_patt
