@@ -2,7 +2,9 @@
 
 ## ステータス
 
-IN DISCUSSION
+ARCHIVED.
+
+- 2026-03-20 ARCHIVED. type_checker.ml として実装。
 
 ## 実装の方向性
 
