@@ -18,7 +18,6 @@
 ; --- プレーンな中置演算子 ---
 ; non を指定すると、連鎖は不可
 (infix non ==)
-(infix non :)
 (infix non <)
 (infix non >)
 
