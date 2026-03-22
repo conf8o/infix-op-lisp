@@ -90,7 +90,7 @@ let rec lisp_to_string (lisp : lisp) : string =
       "(def %s (%s) %s %s)"
       (var_to_string var)
       params_str
-      (lisp_type_to_string ret_ty)
+      (Lisp_type.to_string ret_ty)
       (to_string_expr body)
   | Expr expr -> to_string_expr expr
 
@@ -115,7 +115,7 @@ and binding_patt_to_string = function
       "(func %s (%s) %s)"
       (var_to_string var)
       params_str
-      (lisp_type_to_string ret_ty)
+      (Lisp_type.to_string ret_ty)
 
 
 and var_to_string (name, scope) =
@@ -123,20 +123,6 @@ and var_to_string (name, scope) =
     name
   else
     Printf.sprintf "%s__%s" name scope
-
-
-and lisp_type_to_string = function
-  | Int -> "int"
-  | Bool -> "bool"
-  | Unit -> "unit"
-  | Var v -> v
-  | List elem_type -> Printf.sprintf "list(%s)" (Lisp_type.to_string elem_type)
-  | Arrow (arg_type, ret_type) ->
-    Printf.sprintf
-      "(%s -> %s)"
-      (lisp_type_to_string arg_type)
-      (lisp_type_to_string ret_type)
-  | Inferred -> "_"
 
 
 and to_string_expr = function
@@ -148,7 +134,7 @@ and to_string_expr = function
     Printf.sprintf
       "(fn (%s) %s %s)"
       params_str
-      (lisp_type_to_string ret_ty)
+      (Lisp_type.to_string ret_ty)
       (to_string_expr body)
   | FnAp items ->
     let items_str = List.map to_string_expr items |> String.concat " " in
